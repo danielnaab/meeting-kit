@@ -1,0 +1,14 @@
+{
+  "name": "meeting-kit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p windmill",
+    "import-people": "bun src/migration/people/import-people.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}

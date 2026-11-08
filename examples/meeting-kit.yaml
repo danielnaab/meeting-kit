@@ -1,0 +1,41 @@
+# meeting-kit.yaml: what this repository tells meeting-kit about itself (docs/config.md in the kit).
+# Copy to the repository's top, fill in, then `just meeting-render` and commit the rendered windmill/ tree.
+version: 1
+
+owner:
+  name: Alex Example        # in full, as the instructions name the owner
+  short: Alex               # how the instructions address them
+organization: Example Co    # whose work this vault holds; the agents keep to it
+timezone: America/New_York  # the agents' "today" and the schedules
+
+# agents: [meeting-synthesis, meeting-triage, meeting-briefing]   # default: all three
+
+identity:                   # author of the agents' commits
+  name: example-vault agents
+  email: agents@example-vault.invalid
+
+# Local rules appended to the kit's instructions, one Markdown file per agent (optional).
+instructions:
+  meeting-synthesis: docs/meeting-agents/meeting-synthesis.md
+
+calendar:
+  id: work/alex@example.com
+
+mcp:
+  servers:                  # the keys agents ask for: calendar, contacts, records
+    calendar: { url: https://mcp.example.com/calendar/mcp }
+    contacts: { url: https://mcp.example.com/contacts/mcp }
+  apiKey:
+    header: X-API-Key       # each server gets this header ...
+    env: MCP_API_KEY        # ... as ${MCP_API_KEY}, which run.sh sets from ...
+    variable: mcp_api_key   # ... the Windmill variable f/<folder>/mcp_api_key
+
+windmill:
+  folder: example_vault     # f/example_vault/ in the workspace
+  mount: /opt/example-vault # where the agent worker mounts the checkout
+  claudeConfigDir: .claude-example-vault
+  schedules:                # six-field cron, in timezone
+    synthesis: "0 7/15 * * * *"
+    workdayStart: "0 0 6 * * 1-5"
+  webhook:                  # optional: push-triggered synthesis
+    route: example-vault/meeting-push

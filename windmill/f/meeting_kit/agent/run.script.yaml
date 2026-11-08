@@ -1,0 +1,41 @@
+summary: The meeting agent runner - one `meeting-kit run <agent>` on the agent
+  worker
+description: The Windmill adapter for meeting-kit's runner, which runs from the
+  repository's checkout mounted on the agent worker. See windmill/README.md in
+  the repository.
+lock: ''
+kind: script
+labels:
+  - agent
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    agent:
+      type: string
+      description: Which meeting agent to run
+      default: null
+      enum:
+        - meeting-synthesis
+        - meeting-triage
+        - meeting-briefing
+      originalType: enum
+    dry_run:
+      type: string
+      description: "'true' stops after the runner's --dry-run (prompt and claude
+        args, no model, no push)"
+      default: 'false'
+      enum:
+        - 'false'
+        - 'true'
+      originalType: enum
+    input:
+      type: string
+      description: "The runner's --input: a JSON object (a calendar day, one
+        meeting), or empty"
+      default: ''
+      originalType: string
+  required:
+    - agent
+tag: agent
+timeout: 5400

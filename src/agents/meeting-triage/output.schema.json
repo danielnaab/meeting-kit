@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "properties": {
+    "meetings": {
+      "description": "The meetings to brief, in the order they start. Copy calendar, uid and start exactly from the input.",
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "properties": {
+          "calendar": { "type": "string" },
+          "uid": { "type": "string" },
+          "start": { "type": "string" },
+          "title": { "type": "string" },
+          "why": { "type": "string", "description": "One sentence: what a briefing would give the vault's owner for this meeting." }
+        },
+        "required": ["calendar", "uid", "start", "title", "why"],
+        "additionalProperties": false
+      }
+    },
+    "skipped": {
+      "description": "Every other meeting in the input, with the reason it gets no briefing.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "start": { "type": "string" },
+          "why": { "type": "string" }
+        },
+        "required": ["title", "start", "why"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["meetings", "skipped"],
+  "additionalProperties": false
+}

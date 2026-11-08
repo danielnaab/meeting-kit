@@ -1,0 +1,45 @@
+summary: Synthesize pending meeting transcripts, then pass on any notices
+description: On its schedule (and on a push, when the webhook is on). No gate - the runner's prepare finds the pending
+  transcripts (a transcript without a synthesis) and the flow stops, as skipped,
+  when there are none. See windmill/README.md in the repository.
+value:
+  modules:
+    - id: synthesize
+      value:
+        type: script
+        input_transforms:
+          agent:
+            type: static
+            value: meeting-synthesis
+          dry_run:
+            type: javascript
+            expr: flow_input.dry_run
+          input:
+            type: static
+            value: ''
+        path: f/meeting_kit/agent/run
+      stop_after_if:
+        expr: result.status === 'nothing-to-do'
+        skip_if_stopped: true
+      timeout:
+        type: static
+        value: 5400
+    - id: notify
+      value:
+        type: rawscript
+        content: '!inline notify.inline_script.ts'
+        input_transforms:
+          result:
+            type: javascript
+            expr: results.synthesize
+        language: bun
+labels:
+  - meeting_synthesis
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    dry_run:
+      type: string
+      default: 'false'
+  required: []

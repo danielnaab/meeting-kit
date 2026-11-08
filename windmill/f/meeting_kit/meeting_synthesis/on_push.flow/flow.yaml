@@ -1,0 +1,38 @@
+summary: On a push that adds or changes a meeting transcript, run the synthesis
+  tick
+description: Called by the repository's push webhook (on_push.http_trigger.yaml,
+  signed with the webhook_secret variable). The filter step decides from the
+  payload; the tick flow does the rest. See windmill/README.md in the
+  repository.
+value:
+  modules:
+    - id: filter
+      value:
+        type: rawscript
+        content: '!inline filter.inline_script.ts'
+        input_transforms:
+          body:
+            type: javascript
+            expr: flow_input.body
+        language: bun
+      stop_after_if:
+        expr: '!result.run'
+        skip_if_stopped: true
+    - id: synthesize
+      value:
+        type: flow
+        input_transforms:
+          dry_run:
+            type: static
+            value: 'false'
+        path: f/meeting_kit/meeting_synthesis/tick
+labels:
+  - meeting_synthesis
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    body:
+      type: object
+      description: The push event's payload
+  required: []

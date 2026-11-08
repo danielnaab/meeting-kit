@@ -1,0 +1,15 @@
+summary: Synthesize any pending meeting transcript (meeting-kit.yaml
+  windmill.schedules.synthesis)
+args:
+  dry_run: 'false'
+cron_version: v2
+email: superadmin_secret@windmill.dev
+enabled: true
+is_flow: true
+labels:
+  - meeting_synthesis
+no_flow_overlap: true
+schedule: "{{schedule_synthesis}}"
+script_path: f/meeting_kit/meeting_synthesis/tick
+timezone: "{{timezone}}"
+ws_error_handler_muted: false

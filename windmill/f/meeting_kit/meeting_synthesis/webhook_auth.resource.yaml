@@ -1,0 +1,11 @@
+description: The push webhook's signature check (meeting-kit.yaml windmill.webhook);
+  the secret is the variable f/meeting_kit/webhook_secret.
+resource_type: signature_auth
+value:
+  signature_provider: Custom
+  secret_key: $var:f/meeting_kit/webhook_secret
+  authentication_config:
+    signature_header_name: "{{webhook_signature_header}}"
+    algorithm: sha256
+    encoding: hex
+    signature_prefix: ''

@@ -1,0 +1,7 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": { "/f/infra/alert.ts": ["./types/infra-alert.ts"] }
+  },
+  "include": ["f", "tests", "types"]
+}

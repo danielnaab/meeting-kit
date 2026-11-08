@@ -1,0 +1,5 @@
+summary: The meeting agents (meeting-kit), rendered by `meeting-kit render` from
+  meeting-kit.yaml. Edit in git, not here.
+display_name: '{{folder}}'
+extra_perms: {}
+owners: []

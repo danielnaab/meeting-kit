@@ -1,0 +1,13 @@
+script_path: f/meeting_kit/meeting_synthesis/on_push
+is_flow: true
+route_path: "{{webhook_route}}"
+http_method: post
+is_async: true
+requires_auth: false
+request_type: async
+authentication_method: signature
+authentication_resource_path: f/meeting_kit/meeting_synthesis/webhook_auth
+is_static_website: false
+workspaced_route: false
+wrap_body: true
+raw_string: false

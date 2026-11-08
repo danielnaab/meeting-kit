@@ -1,0 +1,17 @@
+# What graft exports to consumers (.scions/meeting-kit): the code, the Windmill templates, nix/package.nix,
+# meeting-kit.just, the docs and the example. Everything below is development of this repository.
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/flake.nix export-ignore
+/flake.lock export-ignore
+/package.json export-ignore
+/bun.lock export-ignore
+/tsconfig.json export-ignore
+/windmill/tsconfig.json export-ignore
+/windmill/tests export-ignore
+/windmill/types export-ignore
+*.test.ts export-ignore
+/src/runner/testdata export-ignore
+/src/runner/testkit.ts export-ignore

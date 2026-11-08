@@ -1,0 +1,13 @@
+# For working on the kit's templates only: `wmill generate-metadata` and `wmill lint` against f/meeting_kit/, with a
+# throwaway Windmill (never a live workspace). Nothing deploys from here: a consuming repository runs
+# `meeting-kit render`, which writes f/<its folder>/ into its own windmill/ tree, and its host pushes that with its
+# own sync config. The templates' placeholders are inside string values, so these commands read them as text.
+defaultTs: bun
+includes:
+  - f/meeting_kit/**
+skipVariables: true
+skipSecrets: true
+skipResources: false
+includeSchedules: true
+includeTriggers: true
+includeSettings: false

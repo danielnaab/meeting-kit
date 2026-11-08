@@ -1,0 +1,99 @@
+summary: Start the workday - brief the work meetings that need it
+description: Calendar gate, meeting triage, one briefing per chosen meeting, and
+  a check that sends the runs' notices and fails the flow if any step failed.
+  See windmill/README.md in the repository.
+value:
+  modules:
+    - id: calendar_gate
+      value:
+        type: rawscript
+        content: '!inline calendar_gate.inline_script.ts'
+        input_transforms:
+          calendar:
+            type: javascript
+            expr: flow_input.calendar
+          calendar_mcp_url:
+            type: javascript
+            expr: flow_input.calendar_mcp_url
+        language: bun
+      continue_on_error: true
+    - id: triage
+      value:
+        type: script
+        input_transforms:
+          agent:
+            type: static
+            value: meeting-triage
+          dry_run:
+            type: javascript
+            expr: flow_input.dry_run
+          input:
+            type: javascript
+            expr: JSON.stringify(results.calendar_gate)
+        path: f/meeting_kit/agent/run
+      continue_on_error: true
+      skip_if:
+        expr: '!(results.calendar_gate?.meetings?.length > 0)'
+      timeout:
+        type: static
+        value: 900
+    - id: briefings
+      value:
+        type: forloopflow
+        modules:
+          - id: briefing
+            value:
+              type: script
+              input_transforms:
+                agent:
+                  type: static
+                  value: meeting-briefing
+                dry_run:
+                  type: javascript
+                  expr: flow_input.dry_run
+                input:
+                  type: javascript
+                  expr: 'JSON.stringify({ date: results.calendar_gate.date,
+                    ...flow_input.iter.value })'
+              path: f/meeting_kit/agent/run
+            timeout:
+              type: static
+              value: 1500
+        iterator:
+          type: javascript
+          expr: results.triage?.output?.meetings ?? []
+        parallel: false
+        skip_failures: true
+      continue_on_error: true
+    - id: check
+      value:
+        type: rawscript
+        content: '!inline check.inline_script.ts'
+        input_transforms:
+          briefings:
+            type: javascript
+            expr: results.briefings
+          gate:
+            type: javascript
+            expr: results.calendar_gate
+          triage:
+            type: javascript
+            expr: results.triage
+        language: bun
+labels:
+  - workday_start
+  - meeting_briefing
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    calendar:
+      type: string
+      default: "{{calendar_id}}"
+    calendar_mcp_url:
+      type: string
+      default: "{{calendar_mcp_url}}"
+    dry_run:
+      type: string
+      default: 'false'
+  required: []
