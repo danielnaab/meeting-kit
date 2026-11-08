@@ -83,4 +83,4 @@ Release with a semver tag and a `CHANGELOG.md` section. A change that breaks con
 
 ## License
 
-[Apache-2.0](LICENSE).
+Copyright 2026 Daniel Naab. Licensed under [Apache-2.0](LICENSE).

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2 - 2026-11-08
+
+### Changed
+
+- Copyright notice: Copyright 2026 Daniel Naab (`LICENSE`, `NOTICE`, README).
+
 ## v0.1.1 - 2026-11-08
 
 ### Changed

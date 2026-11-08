@@ -13,8 +13,8 @@ const FORBIDDEN = ["flexion", "daniel", "naab", "dnaab", "crushingpennies"];
 const ROOT = join(import.meta.dir, "..");
 const SELF = relative(ROOT, import.meta.path);
 const ALLOWED_FILES = new Set([SELF, "windmill/tests/flows.test.ts"]);
-/** The kit's own home on GitHub. */
-const OWNER = /danielnaab\//gi;
+/** The kit's own home on GitHub, and its copyright holder's notice (LICENSE, NOTICE, README). */
+const OWNER = /danielnaab\/|Copyright 2026 Daniel Naab/gi;
 
 function trackedFiles(): string[] {
   const r = Bun.spawnSync(["git", "ls-files", "-z"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
