@@ -64,7 +64,18 @@ export function composeInstructions(template: string, config: MeetingKitConfig, 
     "",
     `_From \`${appendix.path}\` in this repository. These add to the instructions above; where they are more specific, they win._`,
     "",
-    appendix.text.trim(),
+    appendixBody(appendix.text),
     "",
   ].join("\n");
+}
+
+/**
+ * The part of an appendix that goes into the prompt. An appendix is also a document in its repository, so it may carry
+ * YAML frontmatter, a title, and a trailing `## Sources` section (provenance, for its readers); those stay out.
+ */
+export function appendixBody(text: string): string {
+  let body = text.replace(/^---\n[\s\S]*?\n---\n/, "");
+  body = body.replace(/^\s*# [^\n]*\n/, "");
+  body = body.replace(/\n## Sources\n[\s\S]*$/, "\n");
+  return body.trim();
 }

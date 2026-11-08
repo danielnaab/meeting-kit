@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.1 - 2026-11-08
+
+### Changed
+
+- An instruction appendix may be a regular document in its repository. Its YAML frontmatter, its `#` title, and a
+  trailing `## Sources` section stay out of the prompt, so the appendix can carry lifecycle status and provenance.
+
 ## v0.1.0 - 2026-11-08
 
 The first release. It extracts the content-neutral meeting tooling from a private work-memory vault, where it ran

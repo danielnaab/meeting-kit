@@ -43,4 +43,5 @@ Each agent's `instructions.md` in the kit is a template. These placeholders are 
 - `{{calendar.id}}`
 
 An unknown placeholder fails the run, so a template and its config can't silently disagree. The repository's
-appendix is appended after the template, verbatim.
+appendix is appended after the template. Its YAML frontmatter, `#` title, and trailing `## Sources` section
+are left out, so the appendix can be a regular document with status and provenance.

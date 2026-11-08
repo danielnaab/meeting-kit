@@ -56,3 +56,13 @@ test("the kit's three instruction templates render with any valid config", async
     expect(text).toContain("Alex");
   }
 });
+
+test("an appendix's YAML frontmatter and Sources section stay out of the prompt", () => {
+  const text = composeInstructions("# Kit\n", config, {
+    path: "docs/meeting-agents/x.md",
+    text: "---\ntype: Guide\nstatus: stable\n---\n\n# Local rules for x\n\n### Aliases\n\n- A is B.\n\n## Sources\n\n- Somewhere.\n",
+  });
+  expect(text).not.toContain("status: stable");
+  expect(text).not.toContain("Somewhere");
+  expect(text).toContain("### Aliases\n\n- A is B.");
+});
