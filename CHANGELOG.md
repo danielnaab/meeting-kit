@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.3 - 2026-11-11
+
+### Changed
+
+- notebook-conventions is now notebook-kit: README, and the usage comments in `flake.nix` and `nix/package.nix`,
+  use the new name (`${inputs.notebook-kit}/nix/workspace.nix`). Nothing else changes; a workspace takes this
+  release with notebook-kit v1.0.0.
+
 ## v0.1.2 - 2026-11-08
 
 ### Changed

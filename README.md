@@ -13,7 +13,7 @@ Every agent runs headless (`claude -p --restricted`) in a fresh clone of the vau
 inside the agent's write scope. Everything deterministic is code: the daily-note lines, the indexes, the checks, the
 commit, and the push. Nothing reaches the remote unless every change is in scope and every check passed.
 
-The vault follows the [notebook-conventions](https://github.com/danielnaab/notebook-conventions) layout, and the
+The vault follows the [notebook-kit](https://github.com/danielnaab/notebook-kit) layout, and the
 runner calls its `index`, `check-kb`, and `check-tasks` tools. The flows expect a self-hosted
 [Windmill](https://www.windmill.dev/) whose agent worker mounts a checkout of the vault, as described in the
 rendered `windmill/README.md`.
@@ -22,13 +22,13 @@ rendered `windmill/README.md`.
 
 The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repository that uses it:
 
-1. **Pin it** next to notebook-conventions, and add its command to the tools package. In the workspace's flake
-   (with graft's `mkFlake` and notebook-conventions' `nix/workspace.nix`):
+1. **Pin it** next to notebook-kit, and add its command to the tools package. In the workspace's flake
+   (with graft's `mkFlake` and notebook-kit' `nix/workspace.nix`):
 
    ```nix
    inputs.meeting-kit = { url = "github:danielnaab/meeting-kit/v0.1.0"; flake = false; };
    # ...
-   workspace = import "${inputs.notebook-conventions}/nix/workspace.nix" {
+   workspace = import "${inputs.notebook-kit}/nix/workspace.nix" {
      inherit inputs flakeDir;
      extraPackages = pkgs: [ (import "${inputs.meeting-kit}/nix/package.nix" { inherit pkgs; }) ];
    };

@@ -1,5 +1,5 @@
 # The kit's development flake: its package, a dev shell, and the tests as a check. Consumers don't use it: they
-# import nix/package.nix from their pin (flake = false), the way notebook-conventions' nix/workspace.nix is used.
+# import nix/package.nix from their pin (flake = false), the way notebook-kit' nix/workspace.nix is used.
 {
   description = "meeting-kit: content-neutral meeting agents (synthesis, triage, briefing) for Markdown work-memory vaults";
 
