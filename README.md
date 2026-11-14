@@ -22,20 +22,16 @@ rendered `windmill/README.md`.
 
 The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repository that uses it:
 
-1. **Pin it** next to notebook-kit, and add its command to the tools package. In the workspace's flake
-   (with graft's `mkFlake` and notebook-kit' `nix/workspace.nix`):
+1. **Graft it** (graft v2.13.0 or later). The kit's `graft.nix` adds the `meeting-kit` command to the repository's
+   graft tools (`packages.<system>.tools`), with the bun it is tested with; the repository's flake names nothing
+   of the kit:
 
-   ```nix
-   inputs.meeting-kit = { url = "github:danielnaab/meeting-kit/v0.1.0"; flake = false; };
-   # ...
-   workspace = import "${inputs.notebook-kit}/nix/workspace.nix" {
-     inherit inputs flakeDir;
-     extraPackages = pkgs: [ (import "${inputs.meeting-kit}/nix/package.nix" { inherit pkgs; }) ];
-   };
-   # and add "meeting-kit" to mkFlake's scions
+   ```sh
+   nix run .#graft add https://github.com/danielnaab/meeting-kit@v0.2.0
    ```
 
-   Then run `nix run .#graft` (or `just sync`), which writes `.scions/meeting-kit/`.
+   This adds the git submodule `scions/meeting-kit/` (in the repository's scions directory, if it has one: for a
+   flake in a subdirectory, `--scions nix/agent-tools/.scions`). Commit it.
 
 2. **Describe the repository.** Copy [examples/meeting-kit.yaml](examples/meeting-kit.yaml) to the repository's
    top and fill it in. [docs/config.md](docs/config.md) explains each field. Local rules for an agent go in a
@@ -44,7 +40,7 @@ The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repos
 3. **Wire the recipes.** In the justfile:
 
    ```just
-   import ".scions/meeting-kit/meeting-kit.just"
+   import? "scions/meeting-kit/meeting-kit.just"
    meeting_kit := tools + "/meeting-kit"
    check-local: meeting-check   # plus the workspace's own checks
    ```
@@ -55,7 +51,7 @@ The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repos
 5. **Deploy.** The host's Windmill sync pushes `windmill/f/<folder>/`. It needs the variables listed in the
    rendered `windmill/README.md`, under `f/<folder>/`.
 
-To upgrade, run `just upgrade` (graft moves the pin and rewrites the scion), read `just changelog`, run
+To upgrade, run `just upgrade` (graft moves the submodule to the new tag), read `just changelog`, run
 `just meeting-render`, and commit. The diff of `windmill/` is the deployment change you are taking.
 
 ## Layout
@@ -69,15 +65,16 @@ To upgrade, run `just upgrade` (graft moves the pin and rewrites the scion), rea
 | `src/vault/`, `src/people/`, `src/capture/` | The vault's meeting layout, people notes, and capture |
 | `src/windmill/render.ts` | Renders `windmill/f/meeting_kit/` (templates) into a repository's `windmill/f/<folder>/` |
 | `windmill/f/meeting_kit/` | Windmill templates: the agent runner script, the synthesis tick, the push-triggered synthesis, and the workday briefings |
-| `nix/package.nix` | The command, built from the kit's pin |
+| `graft.nix` | What a repository that grafts the kit gets: the `meeting-kit` tool, with the kit's pinned bun |
+| `nix/package.nix` | The command, built from the kit's own commit |
 | `meeting-kit.just` | Recipes a repository imports |
 | `docs/` | [config](docs/config.md), [executable kits](docs/executable-kits.md) (the pattern this kit follows) |
 
 ## Develop
 
 `nix develop` (or any bun ≥ 1.2.21), `bun install`, then `bun test` and `bun run typecheck`. `nix flake check` runs
-the tests. To try an unreleased change in a repository that grafts the kit, see graft's "Working on a provider".
-Tests, fixtures, and development files are `export-ignore` (see `.gitattributes`), so consumers never receive them.
+the tests. To try an unreleased change in a repository that grafts the kit, see graft's "Fix a provider from a
+consumer" guide.
 Release with a semver tag and a `CHANGELOG.md` section. A change that breaks consumers gets a new major version and an
 **Upgrading** subsection.
 
