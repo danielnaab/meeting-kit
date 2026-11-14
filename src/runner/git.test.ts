@@ -54,3 +54,39 @@ test("a push to an unreachable remote is an error, not a rejection", async () =>
   Bun.spawnSync(["git", "remote", "set-url", "origin", join(tempDir(), "missing.git")], { cwd: root });
   expect(await push(root, branch)).toMatchObject({ ok: false, rejected: false });
 });
+
+test("clone fills the repository's scions (git submodules), nested ones too", async () => {
+  // file:// submodules need protocol.file.allow; a real repository's scions are https or ssh
+  const saved = { ...process.env };
+  Object.assign(process.env, { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "protocol.file.allow", GIT_CONFIG_VALUE_0: "always" });
+  try {
+    const inner = seedRemote({ "README.md": "inner\n" });
+    const kit = seedRemote({ "src/vault/daily.ts": "// kit\n" });
+    const kitWork = join(tempDir(), "kit");
+    Bun.spawnSync(["git", "clone", "--quiet", kit, kitWork]);
+    for (const args of [
+      ["submodule", "add", "--quiet", `file://${inner}`, ".scions/inner"],
+      ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "graft inner"],
+      ["push", "--quiet", "origin", "HEAD:main"],
+    ]) expect(Bun.spawnSync(["git", ...args], { cwd: kitWork, env: process.env }).stderr.toString()).toBe("");
+    const remote = seedRemote({ "README.md": "seed\n" });
+    const work = join(tempDir(), "ws");
+    Bun.spawnSync(["git", "clone", "--quiet", remote, work]);
+    for (const args of [
+      ["submodule", "add", "--quiet", `file://${kit}`, "nix/agent-tools/.scions/meeting-kit"],
+      ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "graft the kit"],
+      ["push", "--quiet", "origin", "HEAD:main"],
+    ]) expect(Bun.spawnSync(["git", ...args], { cwd: work, env: process.env }).stderr.toString()).toBe("");
+
+    const root = join(tempDir(), "repo");
+    await clone(remote, root);
+    expect(await Bun.file(join(root, "nix/agent-tools/.scions/meeting-kit/src/vault/daily.ts")).text()).toBe("// kit\n");
+    expect(await Bun.file(join(root, "nix/agent-tools/.scions/meeting-kit/.scions/inner/README.md")).text()).toBe("inner\n");
+    expect(await status(root)).toEqual([]);
+  } finally {
+    for (const k of ["GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0", "GIT_CONFIG_VALUE_0"]) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  }
+});

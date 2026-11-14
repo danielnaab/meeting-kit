@@ -35,9 +35,18 @@ async function git(cwd: string, args: string[], env?: Record<string, string>): P
   return r.stdout;
 }
 
-/** A shallow clone of `remote` into `dir`; returns the checked-out branch. */
+/**
+ * A shallow clone of `remote` into `dir`, with its scions (git submodules, graft v2.13.0) filled, nested ones
+ * too: the agents read the kits there (`bun <scions>/meeting-kit/...`) and check-kb follows links into them.
+ * Submodules are fetched at depth 1 where the server allows it, else whole. Returns the checked-out branch.
+ */
 export async function clone(remote: string, dir: string): Promise<{ branch: string }> {
   await git(process.cwd(), ["clone", "--quiet", "--depth", "50", remote, dir]);
+  if (await Bun.file(`${dir}/.gitmodules`).exists()) {
+    const update = ["submodule", "update", "--init", "--recursive", "--quiet"];
+    const shallow = await exec(["git", ...update, "--depth", "1"], dir);
+    if (shallow.code !== 0) await git(dir, update);
+  }
   const branch = (await git(dir, ["symbolic-ref", "--short", "HEAD"])).trim();
   return { branch };
 }
