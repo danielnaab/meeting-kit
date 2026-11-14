@@ -14,7 +14,7 @@ inside the agent's write scope. Everything deterministic is code: the daily-note
 commit, and the push. Nothing reaches the remote unless every change is in scope and every check passed.
 
 The vault follows the [notebook-kit](https://github.com/danielnaab/notebook-kit) layout, and the
-runner calls its `index`, `check-kb`, and `check-tasks` tools. The flows expect a self-hosted
+runner calls its `nb-index`, `check-kb`, and `check-tasks` tools (notebook-kit v2.0.0 or later). The flows expect a self-hosted
 [Windmill](https://www.windmill.dev/) whose agent worker mounts a checkout of the vault, as described in the
 rendered `windmill/README.md`.
 
@@ -42,8 +42,14 @@ The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repos
    ```just
    import? "scions/meeting-kit/meeting-kit.just"
    meeting_kit := tools + "/meeting-kit"
-   check-local: meeting-check   # plus the workspace's own checks
+   # plus the workspace's own checks; meeting-check is called, not listed as a dependency (see below)
+   check-local:
+       @{{just_executable()}} --justfile {{quote(justfile())}} meeting-check
    ```
+
+   `import?` keeps `just` working in a clone whose scions are not filled yet only while no recipe of the
+   workspace *depends on* an imported one: `check-local: meeting-check` makes the whole justfile fail to parse
+   there ("unknown dependency"). Call imported recipes from the recipe's body, as above.
 
 4. **Render the Windmill tree** with `just meeting-render`, then commit `windmill/`. `just check` now fails if
    `windmill/` drifts from the config or from the pinned kit.

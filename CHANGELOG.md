@@ -4,7 +4,7 @@
 
 The kit wires itself into a repository that grafts it with graft v2.13.0 or later, where providers are git
 submodules. 0.y counts as a major for graft, so `graft upgrade` takes it only when named
-(`meeting-kit@v0.2.0`). The command, its config and the rendered Windmill tree are unchanged.
+(`meeting-kit@v0.2.0`). It needs notebook-kit v2.0.0 or later in the same repository (the index tool's new name).
 
 ### Added
 
@@ -15,6 +15,14 @@ submodules. 0.y counts as a major for graft, so `graft upgrade` takes it only wh
 
 ### Changed
 
+- **The runner fills the repository's scions.** After its shallow clone it runs
+  `git submodule update --init --recursive` (at depth 1 where the server allows it), so an agent reads the kits
+  in the clone (`bun <scions>/meeting-kit/…`) and `check-kb` resolves links into them. The host's git needs read
+  access to every scion's URL.
+- **The runner and `run.sh` call `nb-index`** (was `index`), notebook-kit v2.0.0's name. The rendered
+  `windmill/` tree changes (`run.sh`, `README.md`).
+- **Docs:** call `meeting-check` from `check-local`'s body, never as its dependency: with the scion empty,
+  `import?` skips the kit's recipes and `just` then rejects the whole justfile.
 - README, `docs/executable-kits.md` and `meeting-kit.just` describe the submodule shape:
   `import? "scions/meeting-kit/meeting-kit.just"`, the whole repository grafted, `.gitattributes` read only by
   `git archive`. `nix/package.nix` is unchanged and still takes `{ pkgs, bun ? pkgs.bun }`.
@@ -32,9 +40,12 @@ v2.13.0 Upgrading steps first; they remove the `meeting-kit` flake input):
    the repository uses bun itself (graft's `perSystem` can add it to the tools).
 4. In the justfile, change `import ".scions/meeting-kit/meeting-kit.just"` to
    `import? "<scions directory>/meeting-kit/meeting-kit.just"`. Other paths that named the old scion
-   (`bun .scions/meeting-kit/…` in docs or instruction appendices) move the same way.
-5. Check: `nix build .#tools && ./result/bin/meeting-kit version` prints `v0.2.0`; `just meeting-check` passes
-   (the rendered `windmill/` tree does not change, as no template changed).
+   (`bun .scions/meeting-kit/…` in docs or instruction appendices) move the same way. If `check-local` lists
+   `meeting-check` as a dependency (`check-local: meeting-check`), call it from the body instead:
+   `check-local:` then, indented, `@{{just_executable()}} --justfile {{quote(justfile())}} meeting-check`.
+5. Take notebook-kit v2.0.0 in the same change (its own Upgrading steps); drop any `index` → `nb-index` shim.
+6. `just meeting-render`, then commit `windmill/` (`run.sh` now checks for `nb-index`).
+7. Check: `nix build .#tools && ./result/bin/meeting-kit version` prints `v0.2.0`; `just meeting-check` passes.
 
 ## v0.1.3 - 2026-11-11
 

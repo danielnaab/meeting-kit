@@ -6,7 +6,13 @@
 #   import? "scions/meeting-kit/meeting-kit.just"
 #   meeting_kit := tools + "/meeting-kit"      # how the command runs here (default: meeting-kit on PATH)
 #
-# and runs `meeting-check` from its check-local, so `just check` covers the config and the rendered tree.
+# and runs `meeting-check` from its check-local's body, so `just check` covers the config and the rendered tree:
+#
+#   check-local:
+#       @{{just_executable()}} --justfile {{quote(justfile())}} meeting-check
+#
+# Never list an imported recipe as a dependency (`check-local: meeting-check`): with the scion empty, `import?`
+# skips this file and `just` then refuses the whole justfile ("unknown dependency").
 
 # The meeting-kit command: a workspace points it at its graft tools package (graft.nix); MEETING_KIT per shell.
 meeting_kit := env("MEETING_KIT", "meeting-kit")
