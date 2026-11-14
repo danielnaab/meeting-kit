@@ -6,8 +6,8 @@
  *   meeting-kit check-config [--root DIR]        validate the repository's meeting-kit.yaml
  *   meeting-kit version                          the kit's version (CHANGELOG.md's newest heading)
  *
- * A consuming repository gets it as a Nix package built from its pin of the kit (nix/package.nix), never from its
- * own source, so the repository's content never enters the Nix store.
+ * A consuming repository gets it in its graft tools (graft.nix builds nix/package.nix from graft's store copy of the
+ * kit's submodule), never from its own source, so the repository's content never enters the Nix store.
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
