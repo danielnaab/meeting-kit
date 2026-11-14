@@ -20,7 +20,7 @@ The Windmill host relies on this repository for the tree, and this repository re
   writes to it. Never evaluate the checkout itself (`nix build <checkout>#…`, `nix run .#…`, `nix develop`, a
   `git+file:` reference): that copies the whole repository into the store too.
 - **The tools, built after each pull** into the checkout's gitignored `.local/tools`, from the repository's tools
-  package: `bin/meeting-kit` (the runner, with its own bun), `bin/index`, `bin/check-kb` and `bin/check-tasks`.
+  package: `bin/meeting-kit` (the runner, with its own bun), `bin/nb-index`, `bin/check-kb` and `bin/check-tasks`.
 - **Two read-only mounts in the `agent` worker** (`tag: agent`): the checkout at `{{mount}}`, and `/nix/store`,
   which the tools link into. A persistent volume at `/agent-home` keeps the `claude` install between jobs; this
   repository's claude config lives in `/agent-home/{{claude_config_dir}}`.

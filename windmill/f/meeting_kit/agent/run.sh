@@ -32,7 +32,7 @@ export TZ="{{timezone}}"
 #
 # The host keeps a pull-only checkout of the repository's main branch, builds the repository's tools package into its
 # .local/tools after each pull, and mounts the checkout read-only (and /nix/store, which the tools link into). The
-# tools are `meeting-kit` (the runner, with its own bun) and the vault's index, check-kb and check-tasks, which the
+# tools are `meeting-kit` (the runner, with its own bun) and the vault's nb-index, check-kb and check-tasks, which the
 # runner runs from MEETING_KIT_TOOLS since the worker has no Nix.
 # Both are checked first, before any secret is read. MEETING_KIT_CODE exists for the kit's tests; nothing sets it on
 # Windmill.
@@ -42,9 +42,9 @@ tools="$code/.local/tools/bin"
 unset MEETING_KIT_CODE
 [ -f "$code/meeting-kit.yaml" ] || {
   echo "$code/meeting-kit.yaml is missing: the host mounts the repository's checkout at $code" >&2; exit 1; }
-for app in meeting-kit index check-kb check-tasks; do
+for app in meeting-kit nb-index check-kb check-tasks; do
   [ -x "$tools/$app" ] || {
-    echo "$tools/$app is missing: the host builds the repository's tools package (meeting-kit, index, check-kb, check-tasks) into $code/.local/tools after each pull" >&2
+    echo "$tools/$app is missing: the host builds the repository's tools package (meeting-kit, nb-index, check-kb, check-tasks) into $code/.local/tools after each pull" >&2
     exit 1; }
 done
 

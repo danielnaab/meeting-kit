@@ -78,7 +78,7 @@ test("MEETING_KIT_TOOLS: the index and checks run from that directory, not from 
   writeFile(code, "agents/writer.md", "# Writer\n");
   const tools = tempDir();
   const log = join(tempDir(), "tools.log");
-  for (const name of ["index", "check-kb", "check-tasks"]) {
+  for (const name of ["nb-index", "check-kb", "check-tasks"]) {
     writeFile(tools, name, `#!/bin/sh\necho "${name} $*" >> ${log}\n`);
     chmodSync(join(tools, name), 0o755);
   }
@@ -106,7 +106,7 @@ test("MEETING_KIT_TOOLS: the index and checks run from that directory, not from 
   });
   expect(exit, o.err.join("\n")).toBe(0);
   expect(JSON.parse(o.out.at(-1)!).status).toBe("pushed");
-  expect(readFileSync(log, "utf8")).toBe("index \ncheck-kb \ncheck-tasks \n");
+  expect(readFileSync(log, "utf8")).toBe("nb-index \ncheck-kb \ncheck-tasks \n");
   expect(remoteFile(remote, "notebook/out/a.md")).toBe("# A\n");
 });
 

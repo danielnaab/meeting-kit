@@ -442,12 +442,12 @@ describe("dry run and keep", () => {
 
 describe("default checks", () => {
   test("without a tools directory: the index and the checks from PATH", () => {
-    expect(defaultChecks()).toEqual([["index"], ["check-kb"], ["check-tasks"]]);
+    expect(defaultChecks()).toEqual([["nb-index"], ["check-kb"], ["check-tasks"]]);
     expect(defaultChecks("")).toEqual(DEFAULT_CHECKS);
   });
 
   test("with a tools directory: the same programs from it", () => {
-    expect(defaultChecks("/opt/tools/bin")).toEqual([["/opt/tools/bin/index"], ["/opt/tools/bin/check-kb"], ["/opt/tools/bin/check-tasks"]]);
-    expect(defaultChecks("/opt/tools/bin/")).toEqual([["/opt/tools/bin/index"], ["/opt/tools/bin/check-kb"], ["/opt/tools/bin/check-tasks"]]);
+    expect(defaultChecks("/opt/tools/bin")).toEqual([["/opt/tools/bin/nb-index"], ["/opt/tools/bin/check-kb"], ["/opt/tools/bin/check-tasks"]]);
+    expect(defaultChecks("/opt/tools/bin/")).toEqual([["/opt/tools/bin/nb-index"], ["/opt/tools/bin/check-kb"], ["/opt/tools/bin/check-tasks"]]);
   });
 });

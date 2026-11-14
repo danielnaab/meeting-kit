@@ -41,8 +41,8 @@ export interface Notifier {
   notify(summary: RunSummary): void | Promise<void>;
 }
 
-/** The index and the checks, in order, as the consuming repository provides them. */
-const CHECK_PROGRAMS = ["index", "check-kb", "check-tasks"];
+/** The index and the checks, in order, as the consuming repository provides them (notebook-kit >= v2.0.0 tools). */
+const CHECK_PROGRAMS = ["nb-index", "check-kb", "check-tasks"];
 
 /** Without a tools directory: the programs from PATH. */
 export const DEFAULT_CHECKS: string[][] = CHECK_PROGRAMS.map((name) => [name]);

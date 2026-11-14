@@ -77,7 +77,7 @@ case "$1" in
   --version) echo "2.1.0 (Claude Code)" ;;
   update) echo "claude update" >> "${dir}/claude.log" ;;
 esac`);
-  for (const name of ["index", "check-kb", "check-tasks"]) stub(join(tools, name), `echo "${name} $*" >> "${dir}/tools.log"`);
+  for (const name of ["nb-index", "check-kb", "check-tasks"]) stub(join(tools, name), `echo "${name} $*" >> "${dir}/tools.log"`);
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -244,12 +244,12 @@ printf '%s' '"value"'`);
   });
 
   test("there is no nix stand-in: the runner runs the checks from MEETING_KIT_TOOLS", async () => {
-    stub(join(tools, "meeting-kit"), `"$MEETING_KIT_TOOLS/index"; "$MEETING_KIT_TOOLS/check-kb"; "$MEETING_KIT_TOOLS/check-tasks"
+    stub(join(tools, "meeting-kit"), `"$MEETING_KIT_TOOLS/nb-index"; "$MEETING_KIT_TOOLS/check-kb"; "$MEETING_KIT_TOOLS/check-tasks"
 command -v nix > "${dir}/nix.path" || true
 printf '%s\\n' '${JSON.stringify(ok)}'`);
     const r = await run(["meeting-synthesis"]);
     expect(r.code, r.stderr).toBe(0);
-    expect(readFileSync(join(dir, "tools.log"), "utf8").trim().split("\n").map((l) => l.split(" ")[0])).toEqual(["index", "check-kb", "check-tasks"]);
+    expect(readFileSync(join(dir, "tools.log"), "utf8").trim().split("\n").map((l) => l.split(" ")[0])).toEqual(["nb-index", "check-kb", "check-tasks"]);
     expect(readFileSync(join(dir, "nix.path"), "utf8")).toBe("");
     expect(existsSync(join(job, "bin/nix"))).toBe(false);
   });
@@ -272,7 +272,7 @@ printf '%s\\n' '${JSON.stringify(ok)}'`);
         const r = await run(["meeting-synthesis", "", dryRun]);
         expect(r.code, dryRun).toBe(1);
         expect(r.stderr).toContain(`${tools}/${app} is missing`);
-        expect(r.stderr).toContain(`the host builds the repository's tools package (meeting-kit, index, check-kb, check-tasks) into ${checkout}/.local/tools`);
+        expect(r.stderr).toContain(`the host builds the repository's tools package (meeting-kit, nb-index, check-kb, check-tasks) into ${checkout}/.local/tools`);
       }
       stub(join(tools, app), saved.replace(/^#!.*\n/, ""));
     }
