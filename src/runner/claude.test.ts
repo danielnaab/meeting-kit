@@ -124,11 +124,13 @@ test("a usage limit is recognized in claude's wording, and nothing else is", () 
     "You've hit your weekly limit · resets Nov 20, 9am",
     "You've hit your session limit",
     "You've hit your limit",
+    "You've hit your org's monthly spend limit · ask your admin to raise it",
+    "You’ve hit your org’s monthly spend limit",
     "Claude AI usage limit reached|1763300000",
     "You're out of extra usage",
     'API Error: 429 {"type":"error","error":{"type":"rate_limit_error"}}',
   ]) expect(isUsageLimit(text), text).toBe(true);
-  for (const text of [undefined, "", "the write scope was violated", "Rate the meeting's limits", "API Error: 500"]) {
+  for (const text of [undefined, "", "the write scope was violated", "Rate the meeting's limits", "API Error: 500", "you hit your target; the limit is fine"]) {
     expect(isUsageLimit(text), String(text)).toBe(false);
   }
 });

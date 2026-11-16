@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.1 - 2026-11-16
+
+### Fixed
+
+- **The model fallback missed the org spend limit.** A Team or Enterprise account stops with "You've hit your org's
+  monthly spend limit · ask your admin to raise it", which the usage-limit check (one word between "hit your" and
+  "limit") did not match, so the run failed instead of moving to the fallback. Up to 40 characters of words,
+  apostrophes (straight or curly) and hyphens may now come between them. No config or rendered-tree change.
+
 ## v0.3.0 - 2026-11-16
 
 ### Added

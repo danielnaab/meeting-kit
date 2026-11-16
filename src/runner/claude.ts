@@ -77,12 +77,13 @@ export interface ModelResult {
 
 /**
  * Whether claude's output says the account is out of usage: a subscription's session, weekly or monthly limit
- * ("You've hit your weekly limit", "Claude AI usage limit reached|<reset>") or the API's rate limit. These are the
+ * ("You've hit your weekly limit", "You've hit your org's monthly spend limit", "Claude AI usage limit
+ * reached|<reset>") or the API's rate limit. These are the
  * failures a different account can absorb; anything else is the agent's own and is never retried elsewhere.
  */
 export function isUsageLimit(text: string | undefined): boolean {
   if (!text) return false;
-  return /\bhit your (?:[\w-]+ )?limit\b|usage limit reached|out of (?:extra )?usage|\brate_limit_error\b/i.test(text);
+  return /\bhit your [\w'’ -]{0,40}?\blimit\b|usage limit reached|out of (?:extra )?usage|\brate_limit_error\b/i.test(text);
 }
 
 /** Reads `claude --output-format json`. claude can exit 0 on a failed turn, so is_error is checked too. */
