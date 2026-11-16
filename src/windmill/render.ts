@@ -62,6 +62,10 @@ export function templateValues(config: MeetingKitConfig): Record<string, string>
     ["api_key_env", mcp.apiKey.env, "mcp.apiKey.env"],
     ["api_key_variable", mcp.apiKey.variable, "mcp.apiKey.variable"],
   ];
+  // Empty without a fallback: run.sh then reads no variable and sets nothing.
+  plain.push(["fallback_base_url", windmill.modelFallback?.baseUrl ?? "", "windmill.modelFallback.baseUrl"]);
+  plain.push(["fallback_variable", windmill.modelFallback?.variable ?? "", "windmill.modelFallback.variable"]);
+  plain.push(["fallback_header", windmill.modelFallback?.header ?? "", "windmill.modelFallback.header"]);
   if (windmill.webhook) {
     plain.push(["webhook_route", windmill.webhook.route, "windmill.webhook.route"]);
     plain.push(["webhook_signature_header", windmill.webhook.signatureHeader, "windmill.webhook.signatureHeader"]);

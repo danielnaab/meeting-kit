@@ -67,7 +67,7 @@ interface Harness {
 async function run(
   agent: AgentDefinition,
   model: ModelRunner,
-  opts: Partial<RunOptions> & { checks?: string[][]; remote?: string; codeRoot?: string } = {},
+  opts: Partial<RunOptions> & { checks?: string[][]; remote?: string; codeRoot?: string; fallback?: ModelRunner } = {},
 ): Promise<Harness> {
   const remote = opts.remote ?? seedRemote(SEED);
   const notified: RunSummary[] = [];
@@ -86,6 +86,7 @@ async function run(
       registry: new AgentRegistry({ [agent.name]: async () => agent }),
       codeRoot: opts.codeRoot ?? codeCheckout(),
       model,
+      fallback: opts.fallback,
       notifier: { notify: (s) => void notified.push(s) },
       checks: opts.checks ?? [["true"]],
       log: (line) => void logs.push(line),
@@ -316,6 +317,50 @@ describe("failures push nothing and notify", () => {
     const { model } = fakeModel({ "notebook/out/ok.md": "ok\n" }, { ok: false, error: "claude reported is_error" });
     const h = await run(fixtureAgent(), model);
     expect(h.summary).toMatchObject({ status: "failed", cost: 0.25, error: expect.stringMatching(/is_error/) });
+    expect(commits(h.remote)).toBe(1);
+  });
+
+  test("a usage limit with a fallback: the clone is reset and the fallback's run is pushed", async () => {
+    let leftover = false;
+    const { model, requests } = fakeModel(
+      { "notebook/out/partial.md": "half\n", "README.md": "scribbled\n" },
+      { ok: false, limited: true, error: "claude reported is_error: You've hit your weekly limit" },
+    );
+    const fallback: ModelRunner = {
+      async run(request) {
+        leftover = existsSync(join(request.cwd, "notebook/out/partial.md")) || readFileSync(join(request.cwd, "README.md"), "utf8") !== "Fixture repository\n";
+        writeFile(request.cwd, "notebook/out/ok.md", "ok\n");
+        return { ok: true, cost: 0.5, turns: 2 };
+      },
+    };
+    const h = await run(fixtureAgent(), model, { fallback });
+    expect(requests).toHaveLength(1);
+    expect(leftover).toBe(false);
+    expect(h.summary).toMatchObject({ status: "pushed", fallback: "usage-limit", cost: 0.5, created: ["notebook/out/ok.md"] });
+    expect(remoteFile(h.remote, "notebook/out/ok.md")).toBe("ok\n");
+    expect(h.logs.some((l) => /usage limit reached.*fallback/.test(l))).toBe(true);
+  });
+
+  test("a usage limit without a fallback fails the run", async () => {
+    const { model } = fakeModel({}, { ok: false, limited: true, error: "claude reported is_error: You've hit your limit" });
+    const h = await run(fixtureAgent(), model);
+    expect(h.summary).toMatchObject({ status: "failed", error: expect.stringMatching(/hit your limit/) });
+    expect(h.summary.fallback).toBeUndefined();
+  });
+
+  test("any other model failure never goes to the fallback", async () => {
+    const { model } = fakeModel({}, { ok: false, error: "claude reported is_error: something else" });
+    const { model: fallback, requests } = fakeModel({ "notebook/out/ok.md": "ok\n" });
+    const h = await run(fixtureAgent(), model, { fallback });
+    expect(requests).toHaveLength(0);
+    expect(h.summary).toMatchObject({ status: "failed" });
+  });
+
+  test("the fallback's own failure fails the run", async () => {
+    const { model } = fakeModel({}, { ok: false, limited: true, error: "usage limit reached" });
+    const { model: fallback } = fakeModel({}, { ok: false, error: "gateway said 401" });
+    const h = await run(fixtureAgent(), model, { fallback });
+    expect(h.summary).toMatchObject({ status: "failed", fallback: "usage-limit", error: expect.stringMatching(/401/) });
     expect(commits(h.remote)).toBe(1);
   });
 

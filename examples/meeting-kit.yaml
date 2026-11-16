@@ -39,3 +39,7 @@ windmill:
     workdayStart: "0 0 6 * * 1-5"
   webhook:                  # optional: push-triggered synthesis
     route: example-vault/meeting-push
+  modelFallback:            # optional: when the Claude account hits its usage limit, rerun on this gateway
+    baseUrl: https://llm.example.com/anthropic
+    variable: gateway_key   # the Windmill variable f/<folder>/gateway_key: the gateway's key
+    header: x-api-key       # optional: also send the key in this header

@@ -71,6 +71,18 @@ export interface ModelResult {
   output?: unknown;
   cost?: number;
   turns?: number;
+  /** The account's usage limit stopped the run (see isUsageLimit): a fallback may take it over. */
+  limited?: boolean;
+}
+
+/**
+ * Whether claude's output says the account is out of usage: a subscription's session, weekly or monthly limit
+ * ("You've hit your weekly limit", "Claude AI usage limit reached|<reset>") or the API's rate limit. These are the
+ * failures a different account can absorb; anything else is the agent's own and is never retried elsewhere.
+ */
+export function isUsageLimit(text: string | undefined): boolean {
+  if (!text) return false;
+  return /\bhit your (?:[\w-]+ )?limit\b|usage limit reached|out of (?:extra )?usage|\brate_limit_error\b/i.test(text);
 }
 
 /** Reads `claude --output-format json`. claude can exit 0 on a failed turn, so is_error is checked too. */
@@ -88,7 +100,10 @@ export function parseClaudeResult(stdout: string, structured: boolean): ModelRes
   const cost = typeof msg.total_cost_usd === "number" ? msg.total_cost_usd : undefined;
   const turns = typeof msg.num_turns === "number" ? msg.num_turns : undefined;
   const result = typeof msg.result === "string" ? msg.result : undefined;
-  if (msg.is_error === true) return { ok: false, error: `claude reported is_error: ${result ?? ""}`.trim(), result, cost, turns };
+  if (msg.is_error === true) {
+    const failed: ModelResult = { ok: false, error: `claude reported is_error: ${result ?? ""}`.trim(), result, cost, turns };
+    return isUsageLimit(result) ? { ...failed, limited: true } : failed;
+  }
   const output = structured ? msg.structured_output : undefined;
   if (structured && (output === null || typeof output !== "object")) {
     return { ok: false, error: "the agent has a schema but claude returned no structured_output object", result, cost, turns };
@@ -109,15 +124,81 @@ export interface ModelRunner {
   run(request: ModelRequest): Promise<ModelResult>;
 }
 
-/** The real model: spawns `claude` (or `bin`) in the clone. stderr passes through to the job log. */
-export function claudeModelRunner(bin = "claude"): ModelRunner {
+/**
+ * Environment changes for the `claude` process: a string sets the variable, `undefined` removes it. The runner's own
+ * environment is the base.
+ */
+export type EnvOverrides = Record<string, string | undefined>;
+
+/** The variables that carry the fallback (fallbackFromEnv). claude itself never needs them. */
+export const FALLBACK_ENV = ["MEETING_KIT_FALLBACK_BASE_URL", "MEETING_KIT_FALLBACK_TOKEN", "MEETING_KIT_FALLBACK_HEADER"] as const;
+
+const withoutFallback: EnvOverrides = Object.fromEntries(FALLBACK_ENV.map((name) => [name, undefined]));
+
+function spawnEnv(overrides: EnvOverrides): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) delete env[k];
+    else env[k] = v;
+  }
+  return env;
+}
+
+/**
+ * The real model: spawns `claude` (or `bin`) in the clone, with `env` applied to the runner's environment. The
+ * fallback's variables are always removed. stderr passes through to the job log, and is also read for a usage limit
+ * (claude can say so there and exit non-zero without printing a result).
+ */
+export function claudeModelRunner(bin = "claude", env: EnvOverrides = {}): ModelRunner {
   return {
     async run({ agent, cwd, args }) {
-      const proc = Bun.spawn([bin, ...args], { cwd, stdin: "ignore", stdout: "pipe", stderr: "inherit" });
-      const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+      const proc = Bun.spawn([bin, ...args], {
+        cwd,
+        env: spawnEnv({ ...withoutFallback, ...env }),
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text().then((text) => {
+          if (text) process.stderr.write(text);
+          return text;
+        }),
+        proc.exited,
+      ]);
       const parsed = parseClaudeResult(stdout, agent.schema !== undefined);
-      if (code !== 0) return { ...parsed, ok: false, error: `claude exited ${code}${parsed.error ? `: ${parsed.error}` : ""}` };
+      if (code !== 0) {
+        const failed = { ...parsed, ok: false, error: `claude exited ${code}${parsed.error ? `: ${parsed.error}` : ""}` };
+        return parsed.limited || isUsageLimit(stderr) || isUsageLimit(stdout) ? { ...failed, limited: true } : failed;
+      }
       return parsed;
     },
   };
+}
+
+/**
+ * The model to fall back on when the account hits its usage limit: claude again, against an Anthropic-compatible
+ * gateway, from
+ *
+ *   MEETING_KIT_FALLBACK_BASE_URL  the gateway's Anthropic API base URL (ANTHROPIC_BASE_URL)
+ *   MEETING_KIT_FALLBACK_TOKEN     its key, sent as the bearer token (ANTHROPIC_AUTH_TOKEN)
+ *   MEETING_KIT_FALLBACK_HEADER    optional: a header that also carries the key (ANTHROPIC_CUSTOM_HEADERS)
+ *
+ * The subscription's token and any API key are removed, so the gateway's key is the only credential. Undefined
+ * without both of the first two.
+ */
+export function fallbackFromEnv(env: Record<string, string | undefined>, bin = "claude"): ModelRunner | undefined {
+  const baseUrl = env.MEETING_KIT_FALLBACK_BASE_URL?.trim();
+  const token = env.MEETING_KIT_FALLBACK_TOKEN?.trim();
+  if (!baseUrl || !token) return undefined;
+  const header = env.MEETING_KIT_FALLBACK_HEADER?.trim();
+  return claudeModelRunner(bin, {
+    ANTHROPIC_BASE_URL: baseUrl,
+    ANTHROPIC_AUTH_TOKEN: token,
+    ANTHROPIC_CUSTOM_HEADERS: header ? `${header}: ${token}` : undefined,
+    ANTHROPIC_API_KEY: undefined,
+    CLAUDE_CODE_OAUTH_TOKEN: undefined,
+  });
 }

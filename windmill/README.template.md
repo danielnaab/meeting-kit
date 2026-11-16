@@ -36,6 +36,7 @@ The Windmill host relies on this repository for the tree, and this repository re
   | `claude_oauth_token` | The Claude account's `claude setup-token` |
   | `{{api_key_variable}}` | The MCP servers' API key, sent as `{{api_key_header}}` |
   | `webhook_secret` | The push webhook's HMAC secret (only with `windmill.webhook` in `meeting-kit.yaml`) |
+  | the `windmill.modelFallback.variable` | The model fallback gateway's key (only with `windmill.modelFallback` in `meeting-kit.yaml`) |
 
 `agent/run.sh` fails at once, before it reads any secret, if `{{mount}}/meeting-kit.yaml` or any of the four tools
 is missing.

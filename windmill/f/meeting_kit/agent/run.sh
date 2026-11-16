@@ -70,6 +70,22 @@ api_key="$(var "{{api_key_variable}}")"
 printf -v "$api_key_env" '%s' "$api_key"
 unset api_key
 CLAUDE_CODE_OAUTH_TOKEN="$(var claude_oauth_token)"
+# The model fallback (meeting-kit.yaml windmill.modelFallback): a gateway the runner reruns the model on when the
+# account hits its usage limit. Optional twice over: without the config nothing is read, and a missing variable only
+# costs the fallback (a warning here, and a usage limit then fails the run as it would without one).
+fallback_base_url="{{fallback_base_url}}"
+if [ -n "$fallback_base_url" ]; then
+  if fallback_token="$(var "{{fallback_variable}}" 2>/dev/null)" && [ -n "$fallback_token" ]; then
+    # Exported only for the run, below, like the Claude token.
+    printf -v MEETING_KIT_FALLBACK_TOKEN '%s' "$fallback_token"
+    MEETING_KIT_FALLBACK_BASE_URL="$fallback_base_url"
+    fallback_header="{{fallback_header}}"
+    if [ -n "$fallback_header" ]; then MEETING_KIT_FALLBACK_HEADER="$fallback_header"; fi
+  else
+    echo "warning: f/{{folder}}/{{fallback_variable}} can't be read; running without the model fallback" >&2
+  fi
+  unset fallback_token
+fi
 
 # --- drop Windmill's identity before running anything else --------------------------------------------------------
 #
@@ -121,9 +137,13 @@ EOF
 
 # --- run ------------------------------------------------------------------------------------------------------------
 #
-# A stray ANTHROPIC_API_KEY would win over the OAuth token in -p mode and bill the API instead of the subscription.
-unset ANTHROPIC_API_KEY
+# A stray ANTHROPIC_API_KEY would win over the OAuth token in -p mode and bill the API instead of the subscription; a
+# stray base URL or auth token would send the subscription's run somewhere else. The fallback's are the runner's to set.
+unset ANTHROPIC_API_KEY ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_CUSTOM_HEADERS
 export "${api_key_env?}" CLAUDE_CODE_OAUTH_TOKEN
+for name in MEETING_KIT_FALLBACK_BASE_URL MEETING_KIT_FALLBACK_TOKEN MEETING_KIT_FALLBACK_HEADER; do
+  if [ -n "${!name:-}" ]; then export "${name?}"; else unset "$name"; fi
+done
 export MEETING_KIT_REMOTE="$repo_url"
 args=(run "$agent" --mcp-config "$job_dir/mcp.json")
 [ "$dry_run" = true ] && args+=(--dry-run)
@@ -160,4 +180,4 @@ fi
 # The runner's summary (status, created, cost, output, notices) is what the flows read: results.triage.output for the
 # briefing loop, notices for the alert. wm_labels become labels on the job row, so the Runs page filters on them.
 jq --arg commit "$commit" --arg claude "$claude_version" \
-  '. + {commit: $commit, claude: $claude, wm_labels: ["agent:\(.agent)", "status:\(.status)"]}' <<<"$summary" >result.json
+  '. + {commit: $commit, claude: $claude, wm_labels: (["agent:\(.agent)", "status:\(.status)"] + (if .fallback then ["model:fallback"] else [] end))}' <<<"$summary" >result.json

@@ -1,7 +1,7 @@
-import { expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { buildClaudeArgs, claudeModelRunner, filterMcpConfig, parseClaudeResult } from "./claude.ts";
+import { buildClaudeArgs, claudeModelRunner, fallbackFromEnv, filterMcpConfig, isUsageLimit, parseClaudeResult } from "./claude.ts";
 
 test("claude args: restricted, allowlisted, strict MCP, JSON output", () => {
   expect(
@@ -117,4 +117,90 @@ test("the claude runner spawns the binary in the clone and reads its JSON", asyn
   writeFileSync(stub, "#!/bin/sh\nexit 3\n");
   const failed = await claudeModelRunner(stub).run({ agent, cwd: dir, prompt: "hi", args: [] });
   expect(failed).toMatchObject({ ok: false, error: expect.stringMatching(/exited 3/) });
+});
+
+test("a usage limit is recognized in claude's wording, and nothing else is", () => {
+  for (const text of [
+    "You've hit your weekly limit · resets Nov 20, 9am",
+    "You've hit your session limit",
+    "You've hit your limit",
+    "Claude AI usage limit reached|1763300000",
+    "You're out of extra usage",
+    'API Error: 429 {"type":"error","error":{"type":"rate_limit_error"}}',
+  ]) expect(isUsageLimit(text), text).toBe(true);
+  for (const text of [undefined, "", "the write scope was violated", "Rate the meeting's limits", "API Error: 500"]) {
+    expect(isUsageLimit(text), String(text)).toBe(false);
+  }
+});
+
+test("an is_error result over a usage limit is marked limited", () => {
+  const limited = parseClaudeResult(JSON.stringify({ is_error: true, result: "You've hit your weekly limit" }), false);
+  expect(limited).toMatchObject({ ok: false, limited: true });
+  const other = parseClaudeResult(JSON.stringify({ is_error: true, result: "boom" }), false);
+  expect(other.limited).toBeUndefined();
+});
+
+describe("the fallback", () => {
+  const agent = { name: "a", instructions: "i", tools: [], mcpServers: [], writes: { create: [], modify: [] }, prepare: () => null };
+  const names = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "MEETING_KIT_FALLBACK_TOKEN"];
+  let dir: string;
+  let stub: string;
+  const saved: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    dir = realpathSync(mkdtempSync(`${tmpdir()}/claude-fallback-`));
+    stub = `${dir}/claude`;
+    // Records the credentials it was given, then answers.
+    writeFileSync(stub, `#!/bin/sh\nenv > "${dir}/env"\nprintf '{"is_error":false,"result":"ok"}'\n`);
+    chmodSync(stub, 0o755);
+    for (const n of names) saved[n] = process.env[n];
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = "subscription-token";
+    process.env.ANTHROPIC_API_KEY = "stray-key";
+    process.env.MEETING_KIT_FALLBACK_TOKEN = "gateway-key";
+  });
+  afterEach(() => {
+    for (const n of names) {
+      if (saved[n] === undefined) delete process.env[n];
+      else process.env[n] = saved[n];
+    }
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const seen = () => {
+    const env = Object.fromEntries(
+      readFileSync(`${dir}/env`, "utf8").split("\n").filter((l) => l.includes("=")).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
+    );
+    return Object.fromEntries(names.map((n) => [n, env[n] ?? "UNSET"]));
+  };
+
+  test("needs both the base URL and the token", () => {
+    expect(fallbackFromEnv({})).toBeUndefined();
+    expect(fallbackFromEnv({ MEETING_KIT_FALLBACK_BASE_URL: "https://gw.example/anthropic" })).toBeUndefined();
+    expect(fallbackFromEnv({ MEETING_KIT_FALLBACK_TOKEN: "k" })).toBeUndefined();
+  });
+
+  test("runs claude on the gateway's key alone", async () => {
+    const fallback = fallbackFromEnv(
+      { MEETING_KIT_FALLBACK_BASE_URL: "https://gw.example/anthropic", MEETING_KIT_FALLBACK_TOKEN: "gateway-key", MEETING_KIT_FALLBACK_HEADER: "x-gw-key" },
+      stub,
+    )!;
+    expect(await fallback.run({ agent, cwd: dir, prompt: "hi", args: [] })).toMatchObject({ ok: true });
+    expect(seen()).toEqual({
+      ANTHROPIC_BASE_URL: "https://gw.example/anthropic",
+      ANTHROPIC_AUTH_TOKEN: "gateway-key",
+      ANTHROPIC_CUSTOM_HEADERS: "x-gw-key: gateway-key",
+      ANTHROPIC_API_KEY: "UNSET",
+      CLAUDE_CODE_OAUTH_TOKEN: "UNSET",
+      MEETING_KIT_FALLBACK_TOKEN: "UNSET",
+    });
+  });
+
+  test("the subscription's claude never sees the gateway's key", async () => {
+    await claudeModelRunner(stub).run({ agent, cwd: dir, prompt: "hi", args: [] });
+    expect(seen()).toMatchObject({ CLAUDE_CODE_OAUTH_TOKEN: "subscription-token", MEETING_KIT_FALLBACK_TOKEN: "UNSET" });
+  });
+
+  test("a limit claude reports on stderr with no result is marked limited", async () => {
+    writeFileSync(stub, "#!/bin/sh\necho \"Claude AI usage limit reached|1763300000\" >&2\nexit 1\n");
+    const r = await claudeModelRunner(stub).run({ agent, cwd: dir, prompt: "hi", args: [] });
+    expect(r).toMatchObject({ ok: false, limited: true, error: expect.stringMatching(/exited 1/) });
+  });
 });

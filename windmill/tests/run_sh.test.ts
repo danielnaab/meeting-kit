@@ -20,6 +20,7 @@ const VARIABLES: Record<string, string> = {
   repo_url: "ssh://git@172.17.0.1:2222/alex/example-vault.git",
   [config.mcp.apiKey.variable]: "fake-mcp-key",
   claude_oauth_token: "fake-oauth-token",
+  [config.windmill.modelFallback!.variable]: "fake-gateway-key",
 };
 
 let dir: string;
@@ -75,7 +76,7 @@ exit 0`);
   stub(join(stubs, "claude"), `
 case "$1" in
   --version) echo "2.1.0 (Claude Code)" ;;
-  update) echo "claude update" >> "${dir}/claude.log" ;;
+  update) echo "claude update" >> "${dir}/claude.log"; env > "${dir}/claude-update.env" ;;
 esac`);
   for (const name of ["nb-index", "check-kb", "check-tasks"]) stub(join(tools, name), `echo "${name} $*" >> "${dir}/tools.log"`);
 });
@@ -160,6 +161,41 @@ describe("run.sh", () => {
     expect(readFileSync(join(dir, "runner.saw-key"), "utf8").trim()).toBe("yes");
   });
 
+  test("hands the runner the model fallback from meeting-kit.yaml and its variable", async () => {
+    fakeRunner(ok);
+    const r = await run(["meeting-synthesis"], { ANTHROPIC_BASE_URL: "https://stray.invalid", ANTHROPIC_AUTH_TOKEN: "stray" });
+    expect(r.code, r.stderr).toBe(0);
+    const env = readEnv();
+    const fallback = config.windmill.modelFallback!;
+    expect(env.MEETING_KIT_FALLBACK_BASE_URL).toBe(fallback.baseUrl);
+    expect(env.MEETING_KIT_FALLBACK_TOKEN).toBe(VARIABLES[fallback.variable]);
+    expect(env.MEETING_KIT_FALLBACK_HEADER).toBe(fallback.header!);
+    // The subscription's run is never pointed anywhere else by a stray variable.
+    for (const name of ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"]) expect(env[name], name).toBeUndefined();
+    expect(r.stdout + r.stderr).not.toContain(VARIABLES[fallback.variable]);
+    // Exported for the runner only: the installer and `claude update` never get it.
+    expect(readFileSync(join(dir, "claude-update.env"), "utf8")).not.toContain("MEETING_KIT_FALLBACK");
+  });
+
+  test("a missing fallback variable warns and runs without the fallback", async () => {
+    const variable = config.windmill.modelFallback!.variable;
+    writeFileSync(join(stubs, "curl"), readFileSync(join(stubs, "curl"), "utf8").replace(`  ${variable}) `, "  never-matches) "));
+    fakeRunner(ok);
+    const r = await run(["meeting-synthesis"]);
+    expect(r.code, r.stderr).toBe(0);
+    expect(r.stderr).toContain(`f/${FOLDER}/${variable} can't be read; running without the model fallback`);
+    const env = readEnv();
+    for (const name of ["MEETING_KIT_FALLBACK_BASE_URL", "MEETING_KIT_FALLBACK_TOKEN", "MEETING_KIT_FALLBACK_HEADER"]) expect(env[name], name).toBeUndefined();
+  });
+
+  test("a run on the fallback is labelled so", async () => {
+    fakeRunner({ ...ok, fallback: "usage-limit" });
+    const r = await run(["meeting-synthesis"]);
+    expect(r.code, r.stderr).toBe(0);
+    const result = JSON.parse(readFileSync(join(job, "result.json"), "utf8"));
+    expect(result.wm_labels).toEqual(["agent:meeting-synthesis", "status:pushed", "model:fallback"]);
+  });
+
   test("the deploy key does not outlive the job, on success or failure", async () => {
     fakeRunner(ok);
     await run(["meeting-synthesis"]);
@@ -224,7 +260,8 @@ describe("run.sh", () => {
 
   test("a variable it cannot read fails the job before the runner starts", async () => {
     fakeRunner(ok);
-    for (const name of Object.keys(VARIABLES)) {
+    // All but the model fallback's, which is optional (its own test above).
+    for (const name of Object.keys(VARIABLES).filter((n) => n !== config.windmill.modelFallback?.variable)) {
       stub(join(stubs, "curl"), `
 for a in "$@"; do url="$a"; done
 case "$url" in */${name}) echo "404" >&2; exit 22 ;; esac

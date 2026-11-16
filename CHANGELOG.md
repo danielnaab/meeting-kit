@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.3.0 - 2026-11-16
+
+### Added
+
+- **Model fallback** (`windmill.modelFallback` in `meeting-kit.yaml`, optional). When `claude` stops on the account's
+  usage limit (a subscription's session, weekly or monthly limit, or a rate limit), the runner resets its clone and
+  reruns the model once through an Anthropic-compatible gateway: `baseUrl` (`ANTHROPIC_BASE_URL`), the key from the
+  Windmill variable `variable` as the bearer token, and optionally also in `header`. The subscription's token is
+  removed from that run. The job's result gains `fallback: "usage-limit"` and the label `model:fallback`. Without
+  the config, or with the variable missing (a warning), a usage limit fails the run as before.
+- The runner reads the fallback from `MEETING_KIT_FALLBACK_BASE_URL`, `MEETING_KIT_FALLBACK_TOKEN` and
+  `MEETING_KIT_FALLBACK_HEADER`, so `meeting-kit run` outside Windmill can use it too. The model's own `claude`
+  never sees them.
+
+### Changed
+
+- `run.sh` also unsets `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_CUSTOM_HEADERS` before the run,
+  so a stray one can't redirect the subscription's run. The rendered `windmill/` tree changes (`run.sh`,
+  `README.md`) whether or not the fallback is configured.
+- claude's stderr is read (and still passed through to the job log), to recognize a usage limit reported there.
+
+### Upgrading
+
+No config change is needed. `graft upgrade meeting-kit@v0.3.0`, then `meeting-kit render` and commit `windmill/`.
+To turn the fallback on, add `windmill.modelFallback`, render, and create its Windmill variable.
+
 ## v0.2.0 - 2026-11-13
 
 The kit wires itself into a repository that grafts it with graft v2.13.0 or later, where providers are git

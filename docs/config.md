@@ -32,6 +32,9 @@ Two parts of the kit read the file:
 | `windmill.schedules.synthesis`, `.workdayStart` | yes | Six-field Windmill cron expressions in `timezone`: the synthesis tick and the weekday briefings. |
 | `windmill.webhook.route` | no | Turns on push-triggered synthesis: a Windmill HTTP route (`/api/r/<route>`) for the Git host's push webhook. |
 | `windmill.webhook.signatureHeader` | no | The header that carries the webhook's HMAC-SHA256 (hex). Default: `X-Forgejo-Signature`. |
+| `windmill.modelFallback.baseUrl` | no | Turns on the model fallback: when the Claude account hits its usage limit (a subscription's session, weekly or monthly limit, or a rate limit), the runner resets its clone and reruns the model once, through this Anthropic-compatible gateway (`ANTHROPIC_BASE_URL`, https). The job's result then has `fallback: "usage-limit"` and the label `model:fallback`. |
+| `windmill.modelFallback.variable` | with `baseUrl` | The Windmill variable under the folder that holds the gateway's key, sent as the bearer token. A missing variable warns and runs without the fallback. |
+| `windmill.modelFallback.header` | no | A header that also carries the key (`ANTHROPIC_CUSTOM_HEADERS`), for a gateway that reads it there. |
 
 ## Instruction templates
 

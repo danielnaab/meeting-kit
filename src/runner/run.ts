@@ -5,13 +5,15 @@
  *
  * (that is, `bun src/runner/run.ts <agent> ...` from the kit's checkout). The repository to work on is --remote, or
  * MEETING_KIT_REMOTE; its meeting-kit.yaml supplies everything else about it (runner.ts). MEETING_KIT_TOOLS=<dir>
- * runs the index and checks from <dir> instead of from PATH (runner.ts defaultChecks).
+ * runs the index and checks from <dir> instead of from PATH (runner.ts defaultChecks). MEETING_KIT_FALLBACK_BASE_URL and
+ * MEETING_KIT_FALLBACK_TOKEN (and optionally MEETING_KIT_FALLBACK_HEADER) name a gateway to rerun the model on when the
+ * account hits its usage limit (claude.ts fallbackFromEnv).
  *
  * Logs go to stderr; the last stdout line is a JSON summary {agent, status, created, cost, output} that a Windmill
  * flow step can read. A failed run exits 1, so Windmill shows the job as failed.
  */
 import { resolve } from "node:path";
-import { claudeModelRunner, type ModelRunner } from "./claude.ts";
+import { claudeModelRunner, fallbackFromEnv, type ModelRunner } from "./claude.ts";
 import { parseArgs } from "./cli.ts";
 import { type AgentRegistry, defaultRegistry } from "./registry.ts";
 import { defaultChecks, type Notifier, runAgent } from "./runner.ts";
@@ -24,6 +26,8 @@ export interface MainDeps {
   /** Defaults to the kit's checkout the runner itself runs from. */
   codeRoot?: string;
   model?: ModelRunner;
+  /** Defaults to fallbackFromEnv(env): none unless MEETING_KIT_FALLBACK_BASE_URL and _TOKEN are set. */
+  fallback?: ModelRunner;
   notifier?: Notifier;
   /** Defaults to defaultChecks(env.MEETING_KIT_TOOLS). */
   checks?: string[][];
@@ -46,6 +50,7 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
     registry: deps.registry ?? defaultRegistry(),
     codeRoot: deps.codeRoot ?? CODE_ROOT,
     model: deps.model ?? claudeModelRunner(),
+    fallback: "fallback" in deps ? deps.fallback : fallbackFromEnv(deps.env),
     notifier,
     checks: deps.checks ?? defaultChecks(deps.env.MEETING_KIT_TOOLS),
     log: (line) => deps.stderr(`[${opts.agent}] ${line}`),

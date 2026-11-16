@@ -34,6 +34,8 @@ export interface RunSummary {
   output: unknown;
   /** From the agent's finish: what the owner should hear about even when the run succeeded. */
   notices?: string[];
+  /** Present when the model ran on the fallback: why ("usage-limit"). */
+  fallback?: "usage-limit";
   error?: string;
 }
 
@@ -63,6 +65,11 @@ export interface RunnerDeps {
    */
   codeRoot: string;
   model: ModelRunner;
+  /**
+   * Run instead when `model` stops on its account's usage limit (claude.ts fallbackFromEnv): once, on the same clone,
+   * reset to the commit it was cloned at. Absent: such a run fails like any other.
+   */
+  fallback?: ModelRunner;
   notifier: Notifier;
   /** Run in the clone, in order, after finish: indexes first, then checks. */
   checks?: string[][];
@@ -135,7 +142,14 @@ export async function runAgent(opts: RunOptions, deps: RunnerDeps): Promise<RunS
       return summary;
     }
 
-    const result = await deps.model.run({ agent, cwd: first.root, prompt: prepared.prompt, args });
+    const request = { agent, cwd: first.root, prompt: prepared.prompt, args };
+    let result = await deps.model.run(request);
+    if (!result.ok && result.limited && deps.fallback) {
+      log(`model: usage limit reached (${result.error ?? "no detail"}); running on the fallback`);
+      await resetClone(first.root);
+      result = await deps.fallback.run(request);
+      summary.fallback = "usage-limit";
+    }
     summary.cost = result.cost ?? null;
     log(`model: turns=${result.turns ?? "?"} cost_usd=${result.cost ?? "?"}`);
     if (!result.ok) throw new RunFailure(`model failed: ${result.error ?? "unknown error"}`);
@@ -220,6 +234,14 @@ async function finishAndCommit(
 async function assertScope(root: string, agent: AgentDefinition, after: string): Promise<void> {
   const violations = checkFinishChanges(await status(root), agent.writes);
   if (violations.length > 0) throw new RunFailure(`write scope violated after ${after}:\n${violations.join("\n")}`);
+}
+
+/** Discards whatever a stopped model left in the clone: tracked changes and untracked files, ignored ones included. */
+async function resetClone(root: string): Promise<void> {
+  for (const cmd of [["git", "reset", "--hard", "--quiet", "HEAD"], ["git", "clean", "-fdxq"]]) {
+    const r = await exec(cmd, root);
+    if (r.code !== 0) throw new RunFailure(`${cmd.join(" ")} failed before the fallback: ${r.stderr.trim()}`);
+  }
 }
 
 /** Writes the model's files into a fresh clone; one that already exists there is a conflict. */

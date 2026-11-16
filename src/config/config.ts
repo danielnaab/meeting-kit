@@ -63,6 +63,12 @@ export interface WindmillConfig {
   schedules: { synthesis: string; workdayStart: string };
   /** Push-triggered synthesis: an HTTP route for a Forgejo push webhook. Absent: schedule only. */
   webhook?: { route: string; signatureHeader: string };
+  /**
+   * When the Claude account hits its usage limit, rerun the model once on an Anthropic-compatible gateway:
+   * `baseUrl` its Anthropic API base URL, `variable` the Windmill variable holding its key (sent as the bearer token),
+   * `header` optionally a header that also carries the key. Absent: a usage limit fails the run.
+   */
+  modelFallback?: { baseUrl: string; variable: string; header?: string };
 }
 
 export class ConfigError extends Error {}
@@ -110,7 +116,7 @@ export function parseConfig(raw: unknown, source = CONFIG_FILE): MeetingKitConfi
   const mcp = r.obj(top.mcp, `${source}.mcp`, ["servers", "apiKey"]);
   const servers = r.obj(mcp.servers, `${source}.mcp.servers`, Object.keys(isObj(mcp.servers) ? mcp.servers : {}));
   const apiKey = r.obj(mcp.apiKey, `${source}.mcp.apiKey`, ["header", "variable", "env"]);
-  const wm = r.obj(top.windmill, `${source}.windmill`, ["folder", "mount", "claudeConfigDir", "schedules", "webhook"]);
+  const wm = r.obj(top.windmill, `${source}.windmill`, ["folder", "mount", "claudeConfigDir", "schedules", "webhook", "modelFallback"]);
   const schedules = r.obj(wm.schedules, `${source}.windmill.schedules`, ["synthesis", "workdayStart"]);
 
   let agents: AgentName[] = [...AGENTS];
@@ -146,6 +152,19 @@ export function parseConfig(raw: unknown, source = CONFIG_FILE): MeetingKitConfi
     };
   }
 
+  let modelFallback: WindmillConfig["modelFallback"];
+  if (wm.modelFallback !== undefined) {
+    const at = `${source}.windmill.modelFallback`;
+    const f = r.obj(wm.modelFallback, at, ["baseUrl", "variable", "header"]);
+    modelFallback = {
+      baseUrl: r.str(f, "baseUrl", at, { pattern: /^https:\/\/\S+$/, hint: "must be an https URL" }),
+      variable: r.str(f, "variable", at, { pattern: /^[a-z0-9_]+$/, hint: "must be a variable name under the folder, [a-z0-9_]" }),
+      ...(f.header !== undefined
+        ? { header: r.str(f, "header", at, { pattern: /^[A-Za-z0-9-]+$/, hint: "must be an HTTP header name" }) }
+        : {}),
+    };
+  }
+
   const config: MeetingKitConfig = {
     version: 1,
     owner: { name: r.str(owner, "name", `${source}.owner`), short: r.str(owner, "short", `${source}.owner`) },
@@ -175,6 +194,7 @@ export function parseConfig(raw: unknown, source = CONFIG_FILE): MeetingKitConfi
         workdayStart: r.str(schedules, "workdayStart", `${source}.windmill.schedules`, { pattern: CRON6, hint: "must be a six-field cron expression" }),
       },
       ...(webhook ? { webhook } : {}),
+      ...(modelFallback ? { modelFallback } : {}),
     },
   };
   if (r.errors.length) throw new ConfigError(`invalid ${source}:\n  ${r.errors.join("\n  ")}`);
