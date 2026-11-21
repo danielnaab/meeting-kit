@@ -29,7 +29,7 @@ The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repos
    of the kit:
 
    ```sh
-   nix run .#graft add https://github.com/danielnaab/meeting-kit@v0.2.0
+   nix run .#graft add https://github.com/danielnaab/meeting-kit@v0.4.0
    ```
 
    This adds the git submodule `scions/meeting-kit/` (in the repository's scions directory, if it has one: for a
