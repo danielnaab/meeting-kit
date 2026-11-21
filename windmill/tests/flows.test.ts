@@ -50,6 +50,10 @@ describe("the runner script", async () => {
     expect(meta.schema.properties.agent.enum).toEqual([...AGENT_NAMES]);
     expect(meta.schema.properties.dry_run.enum).toEqual(["false", "true"]);
   });
+  test("the agent dropdown is rendered from the runner's registry, not written in the template", async () => {
+    const template = await yaml(`${TEMPLATES}/agent/run.script.yaml`);
+    expect(template.schema.properties.agent.enum).toEqual(["{{agent_enum}}"]);
+  });
   test("its schema is the script's arguments, in order: agent, meeting, why, input, dry_run", () => {
     expect(Object.keys(meta.schema.properties)).toEqual(["agent", "meeting", "why", "input", "dry_run"]);
     expect(meta.schema.required).toEqual(["agent"]);

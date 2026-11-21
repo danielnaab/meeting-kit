@@ -15,10 +15,9 @@ schema:
       type: string
       description: Which meeting agent to run
       default: null
-      enum:
-        - meeting-synthesis
-        - meeting-triage
-        - meeting-briefing
+      # The runner's registry (meeting-kit's src/runner/registry.ts AGENT_NAMES), written in by
+      # `meeting-kit render` from a one-string placeholder list in the kit's template.
+      enum: ["{{agent_enum}}"]
       originalType: enum
     meeting:
       type: string

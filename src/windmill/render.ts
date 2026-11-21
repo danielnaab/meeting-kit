@@ -15,6 +15,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ConfigError, loadConfig, type MeetingKitConfig } from "../config/config.ts";
+import { AGENT_NAMES } from "../runner/registry.ts";
 import { drift, fill, renderTemplates, TemplateError, writeTree, type Files } from "../render/tree.ts";
 
 /** The kit's windmill/ directory: templates under f/meeting_kit/, the README template beside them. */
@@ -80,8 +81,19 @@ export function templateValues(config: MeetingKitConfig): Record<string, string>
   ]));
   return {
     ...Object.fromEntries(plain.map(([name, value]) => [name, value])),
+    agent_enum: agentEnum(AGENT_NAMES),
     mcp_servers_json: JSON.stringify({ mcpServers: servers }, null, 2),
   };
+}
+
+/**
+ * The runner script's agent dropdown, from the runner's registry. The template holds `enum: ["{{agent_enum}}"]`, a
+ * valid one-string list, so the value closes and reopens the quotes between names: `a", "b` renders `["a", "b"]`.
+ */
+export function agentEnum(names: readonly string[]): string {
+  const bad = names.filter((n) => !/^[a-z][a-z0-9-]*$/.test(n));
+  if (bad.length || names.length === 0) throw new TemplateError(`agent names must be [a-z][a-z0-9-]*: ${bad.join(", ") || "none"}`);
+  return names.join('", "');
 }
 
 /** The rendered tree, by path under the repository's windmill/ directory. */
