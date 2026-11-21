@@ -2,7 +2,8 @@
 //
 // No `main`: Windmill treats this as shared logic, and a gate imports it by relative path
 // (`../shared/mcp.ts` from a script in a use-case folder, `../../shared/mcp.ts` from a flow's
-// inline step). The tests import the same file.
+// inline step). The tests import the same file, and so does the kit's own src/meetings/, so it
+// must stay free of placeholders.
 //
 // It speaks just enough JSON-RPC for read-only tool calls through an MCP gateway: initialize
 // once per client, then `tools/call`. A gate never calls a model; it reads what it needs and

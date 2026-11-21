@@ -64,7 +64,7 @@ export function remoteLog(remote: string, format = "%s"): string[] {
 }
 
 /** A valid meeting-kit.yaml for a seeded remote: fictional owner, every agent enabled, commits by Test Agents. */
-export function configYaml(extra: { agents?: string[]; instructions?: Record<string, string> } = {}): string {
+export function configYaml(extra: { agents?: string[]; instructions?: Record<string, string>; calendarUrl?: string } = {}): string {
   const lines = [
     "version: 1",
     "owner: { name: Sam Rivera, short: Sam }",
@@ -77,7 +77,7 @@ export function configYaml(extra: { agents?: string[]; instructions?: Record<str
       : []),
     "calendar: { id: work/sam@example.com }",
     "mcp:",
-    "  servers: { calendar: { url: https://mcp.example.com/calendar } }",
+    `  servers: { calendar: { url: "${extra.calendarUrl ?? "https://mcp.example.com/calendar"}" } }`,
     "  apiKey: { header: X-API-Key, variable: mcp_api_key, env: MCP_API_KEY }",
     "windmill:",
     "  folder: example_vault",

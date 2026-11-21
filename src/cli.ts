@@ -2,6 +2,7 @@
  * meeting-kit: the kit's one command.
  *
  *   meeting-kit run <agent> [--input JSON] [--dry-run] [--keep] [--remote URL] [--mcp-config PATH] [--today DATE]
+ *   meeting-kit meetings [--json] [--date DATE] [--root DIR]   the meetings `run meeting-briefing --meeting` accepts
  *   meeting-kit render [--root DIR] [--check]    write (or check) the repository's windmill/ tree from its config
  *   meeting-kit check-config [--root DIR]        validate the repository's meeting-kit.yaml
  *   meeting-kit version                          the kit's version (CHANGELOG.md's newest heading)
@@ -17,6 +18,8 @@ const KIT_ROOT = resolve(import.meta.dir, "..");
 
 export const USAGE = `usage: meeting-kit <command> [args]
   run <agent> [options]      run one meeting agent (meeting-kit run --help)
+  meetings [--json] [--date YYYY-MM-DD] [--root DIR]
+                             list the day's meetings, by the ID \`run meeting-briefing --meeting\` takes
   render [--root DIR] [--check]
                              write the repository's windmill/ tree from meeting-kit.yaml (--check: report drift)
   check-config [--root DIR]  validate meeting-kit.yaml
@@ -33,6 +36,14 @@ export async function main(argv: string[]): Promise<number> {
     case "run": {
       const { main: run } = await import("./runner/run.ts");
       return run(rest, {
+        env: process.env,
+        stdout: (line) => console.log(line),
+        stderr: (line) => console.error(line),
+      });
+    }
+    case "meetings": {
+      const { main: meetings } = await import("./meetings/command.ts");
+      return meetings(rest, {
         env: process.env,
         stdout: (line) => console.log(line),
         stderr: (line) => console.error(line),

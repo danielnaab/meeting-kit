@@ -17,7 +17,8 @@
 // Everything else goes to the triage, which decides. A tentative or unanswered invite stays in.
 //
 // No `main`: Windmill treats this as shared logic, and the gate imports it as
-// `../meeting_briefing/calendar.ts`.
+// `../meeting_briefing/calendar.ts`. The kit's own `meeting-kit meetings`
+// (src/meetings/meetings.ts) imports this template too, so it must stay free of placeholders.
 
 import type { McpClient } from "../shared/mcp.ts";
 
