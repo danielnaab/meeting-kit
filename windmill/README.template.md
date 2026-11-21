@@ -46,8 +46,8 @@ is missing.
 | `agent/run.sh` | The one agent runner: `meeting-kit run <agent>` on the `agent` worker (90-minute limit) |
 | `meeting_synthesis/tick.flow/` + `tick.schedule.yaml` | Runs on `windmill.schedules.synthesis`: `meeting-synthesis`, then a `notify` step for its notices |
 | `meeting_synthesis/on_push.flow/` + `on_push.http_trigger.yaml` + `webhook_auth.resource.yaml` | Only with `windmill.webhook`: a signed push webhook that runs the tick when a push adds or changes a transcript |
-| `workday_start.flow/` + `workday_start.schedule.yaml` | Runs on `windmill.schedules.workdayStart`: calendar gate, `meeting-triage`, one `meeting-briefing` per chosen meeting, then `check` |
-| `meeting_briefing/calendar.ts` | The calendar gate's rule; its `Day` is meeting-triage's input |
+| `workday_start.flow/` + `workday_start.schedule.yaml` | Runs on `windmill.schedules.workdayStart`: calendar gate, `meeting-triage`, one `meeting-briefing --meeting <date>/<uid>` per chosen meeting, then `check` |
+| `meeting_briefing/calendar.ts` | The calendar gate's rule; its `Day` is meeting-triage's input. `meeting-kit meetings` and `run --meeting` apply the same rule |
 | `shared/mcp.ts`, `shared/windmill.ts` | A minimal MCP client, and the Windmill variables API, for the Bun steps (no npm dependencies) |
 | `shared/review.ts` | What the flows make of the runner's results: failures, notices, the alert |
 | `shared/push.ts` | Only with `windmill.webhook`: which pushes are worth a synthesis run |
@@ -98,6 +98,7 @@ unserved), and the `webhook_secret` variable has to exist before the resource th
 - **A schedule, flow or script itself:** change the kit's templates (the kit's `windmill/` directory), then
   upgrade the kit here and render.
 - **Try a run:** run `f/{{folder}}/agent/run` from the Windmill UI with `dry_run: 'true'`. It prints the prompt and
-  the claude arguments, calls no model and pushes nothing. Both scheduled flows also take `dry_run`.
+  the claude arguments, calls no model and pushes nothing. Both scheduled flows also take `dry_run`. A briefing
+  needs `meeting`, an ID that `meeting-kit meetings` lists (`<date>/<uid>`); `input` is meeting-triage's alone.
 - Windmill applies no flow defaults to a scheduled run, so each schedule passes every flow argument; the kit's tests
   check this.

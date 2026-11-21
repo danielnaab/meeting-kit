@@ -6,7 +6,9 @@ in, describes itself in `meeting-kit.yaml`, and keeps only its content and confi
 - **meeting-synthesis** turns a captured transcript into a synthesis note. It also updates the people notes it
   mentions and the day's daily note.
 - **meeting-triage** reads the day's calendar and chooses the meetings worth a briefing.
-- **meeting-briefing** writes a briefing for one meeting from the calendar, contacts, and the vault.
+- **meeting-briefing** writes a briefing for one meeting from the calendar, contacts, and the vault. `meeting-kit
+  meetings` lists the day's meetings, by the ID `meeting-kit run meeting-briefing --meeting` takes
+  ([docs/cli.md](docs/cli.md)).
 - **capture** files a freshly transcribed meeting under `notebook/raw/meetings/`, where synthesis finds it.
 
 Every agent runs headless (`claude -p --restricted`) in a fresh clone of the vault. The model may only create files
@@ -64,7 +66,8 @@ To upgrade, run `just upgrade` (graft moves the submodule to the new tag), read 
 
 | Path | What it is |
 |---|---|
-| `src/cli.ts` | The `meeting-kit` command: `run`, `render`, `check-config`, `version` |
+| `src/cli.ts` | The `meeting-kit` command: `run`, `meetings`, `render`, `check-config`, `version` ([docs/cli.md](docs/cli.md)) |
+| `src/meetings/` | The meetings a caller can name: one day of the calendar, by ID (`meetings`, `run --meeting`) |
 | `src/config/` | `meeting-kit.yaml`: the contract between the kit and a repository |
 | `src/runner/` | One agent run: clone, prepare, model, scope checks, finish, index and checks, commit, push |
 | `src/agents/<name>/` | Each agent: its code (`agent.ts`) and instruction template (`instructions.md`) |
@@ -74,7 +77,7 @@ To upgrade, run `just upgrade` (graft moves the submodule to the new tag), read 
 | `graft.nix` | What a repository that grafts the kit gets: the `meeting-kit` tool, with the kit's pinned bun |
 | `nix/package.nix` | The command, built from the kit's own commit |
 | `meeting-kit.just` | Recipes a repository imports |
-| `docs/` | [config](docs/config.md), [executable kits](docs/executable-kits.md) (the pattern this kit follows) |
+| `docs/` | [the command](docs/cli.md), [config](docs/config.md), [executable kits](docs/executable-kits.md) (the pattern this kit follows) |
 
 ## Develop
 

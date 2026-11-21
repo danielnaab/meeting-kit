@@ -1,5 +1,57 @@
 # Changelog
 
+## v0.4.0 - 2026-11-21
+
+The command gains typed arguments a caller can validate: `meeting-briefing` takes a meeting by ID instead of free
+JSON, and `meeting-kit meetings` lists the IDs. It breaks callers of `run meeting-briefing --input` and changes the
+rendered `windmill/` tree. `meeting-kit.yaml` is unchanged (still `version: 1`).
+
+### Added
+
+- **`meeting-kit meetings [--json] [--date YYYY-MM-DD] [--root DIR]`** lists one day of the configured calendar
+  (default today, in `timezone`): the meetings `run meeting-briefing --meeting` accepts, each with its ID
+  `<date>/<uid>`, and the events left out, with the reason. It reads the calendar through
+  `mcp.servers.calendar` with the key in the environment variable `mcp.apiKey.env`, applying the workday_start
+  calendar gate's rule (the same file). Human lines by default; `--json` prints the versioned `meetings/1` shape.
+  Exit codes: 0 listed, 1 calendar unreadable, 2 bad arguments, config or environment.
+  [docs/cli.md](docs/cli.md) documents the command, the shape and the exit codes.
+- **`meeting-kit run meeting-briefing --meeting ID [--why TEXT]`**. The runner reads the meeting from the
+  calendar when the run starts. An ID that the calendar doesn't list fails the run, and the error gives the
+  command that lists the IDs. `--why` carries the triage's one line, as the flow's `why` did.
+- **`AgentDefinition.takes`** (`"meeting"`, `"input"`, or absent) says which arguments an agent accepts. An
+  argument the agent does not take, or a missing `--meeting`, is a usage error (exit 2) before anything is
+  cloned.
+
+### Changed
+
+- **`--input` is meeting-triage's alone.** Its caller is the workday_start flow, which passes the calendar gate's
+  day. meeting-briefing rejects `--input`, and meeting-synthesis takes neither argument.
+- **meeting-briefing resolves only the organizer.** Before, it also resolved the `attendees` an `--input` could
+  carry. The calendar listing has the organizer and an attendee count, and the model still reads the attendees
+  from `get_event`.
+- **The runner script's agent dropdown is rendered from the runner's registry** (`src/runner/registry.ts`
+  `AGENT_NAMES`), not written out in `agent/run.script.yaml`.
+- **`agent/run.sh` takes five arguments: `agent`, `meeting`, `why`, `input`, `dry_run`.** Before, it took
+  `agent`, `input` and `dry_run`. The workday_start briefing loop passes `meeting` (the gate's date and the
+  triage's uid) and `why` instead of `input`. The flow, the script's schema, `run.sh` and the rendered `README.md`
+  change. `dry_run` is still a string.
+
+### Upgrading
+
+1. Upgrade the kit, `just meeting-render`, and commit `windmill/`. Deploy it and the checkout's tools together:
+   the new flow passes `--meeting`, which an older runner rejects, and an older flow passes `--input` to the
+   briefing, which this runner rejects.
+2. Change anything outside the flows that ran `meeting-kit run meeting-briefing --input '{…}'` (scripts, notes,
+   a manual Windmill run of `agent/run` with `input`):
+   - find the meeting's ID with `meeting-kit meetings --date YYYY-MM-DD` (from the repository's checkout, with
+     the `mcp.apiKey.env` variable set);
+   - run `meeting-kit run meeting-briefing --meeting <date>/<uid>`, adding `--why "…"` if you had a `why`.
+   A meeting the calendar does not list (all-day, cancelled, declined, solo) can no longer be briefed by passing
+   its JSON.
+3. Nothing changes for `meeting-kit run meeting-triage --input` or for meeting-synthesis.
+4. A positional call of `f/<folder>/agent/run` (rather than by name, as the flows call it) must use the new
+   order: `agent, meeting, why, input, dry_run`.
+
 ## v0.3.1 - 2026-11-16
 
 ### Fixed

@@ -5,12 +5,15 @@ any repository: no names, calendars, servers, or schedules. [examples/meeting-ki
 is a complete example. `meeting-kit check-config` (part of `just meeting-check`) validates the file and lists every
 problem. Unknown keys are errors.
 
-Two parts of the kit read the file:
+Three parts of the kit read the file:
 
 - **The runner, at run time,** reads it from its fresh clone of the vault: `owner`, `organization`, `timezone`,
   `calendar`, `agents`, `identity`, `instructions`. A change merged to the vault reaches the next run.
 - **`meeting-kit render`** reads it when you render: `timezone`, `calendar`, `mcp`, `windmill`. A change needs
   `just meeting-render` and a commit, then the host's Windmill sync.
+- **`meeting-kit meetings`, and the runner for `--meeting`,** read `calendar`, `timezone`, and
+  `mcp.servers.calendar` with `mcp.apiKey` to read the day's meetings ([cli.md](cli.md)). The key comes from the
+  environment variable `mcp.apiKey.env`.
 
 ## Fields
 
