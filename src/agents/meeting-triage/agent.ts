@@ -42,6 +42,7 @@ function prepare({ today, input }: PrepareContext) {
 
 const agent: AgentDefinition = {
   name: "meeting-triage",
+  takes: "input",
   instructions: `${DIR}/instructions.md`,
   model: "sonnet",
   tools: ["Read", "Grep", "Glob", ...CALENDAR_READS],

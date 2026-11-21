@@ -51,10 +51,12 @@ value:
                 dry_run:
                   type: javascript
                   expr: flow_input.dry_run
-                input:
+                meeting:
                   type: javascript
-                  expr: 'JSON.stringify({ date: results.calendar_gate.date,
-                    ...flow_input.iter.value })'
+                  expr: results.calendar_gate.date + '/' + flow_input.iter.value.uid
+                why:
+                  type: javascript
+                  expr: flow_input.iter.value.why
               path: f/meeting_kit/agent/run
             timeout:
               type: static

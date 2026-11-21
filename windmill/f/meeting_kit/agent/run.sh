@@ -10,11 +10,14 @@
 # scope, the checks, the commit (and its author) and the push are all the runner's, read from the repository at run
 # time.
 #
-# Windmill reads the arguments from the three assignments below. `input` is the runner's --input: a JSON object (the
-# calendar gate's day for meeting-triage, one meeting for meeting-briefing), or empty.
+# Windmill reads the arguments from the five assignments below, and passes each as a string. `meeting` and `why` are
+# meeting-briefing's --meeting (an ID from `meeting-kit meetings`) and --why; `input` is meeting-triage's --input (the
+# calendar gate's day, as JSON). An empty one is not passed; the runner rejects an argument its agent does not take.
 agent="$1"
-input="${2:-}"
-dry_run="${3:-false}"
+meeting="${2:-}"
+why="${3:-}"
+input="${4:-}"
+dry_run="${5:-false}"
 
 set -euo pipefail
 
@@ -147,6 +150,8 @@ done
 export MEETING_KIT_REMOTE="$repo_url"
 args=(run "$agent" --mcp-config "$job_dir/mcp.json")
 [ "$dry_run" = true ] && args+=(--dry-run)
+[ -n "$meeting" ] && args+=(--meeting "$meeting")
+[ -n "$why" ] && args+=(--why "$why")
 [ -n "$input" ] && args+=(--input "$input")
 
 # A wedged run is stopped rather than holding the agent worker, which runs one job at a time. Windmill stops it

@@ -50,10 +50,11 @@ describe("the runner script", async () => {
     expect(meta.schema.properties.agent.enum).toEqual([...AGENT_NAMES]);
     expect(meta.schema.properties.dry_run.enum).toEqual(["false", "true"]);
   });
-  test("its schema is the script's arguments, in order: agent, input, dry_run", () => {
-    expect(Object.keys(meta.schema.properties).sort()).toEqual(["agent", "dry_run", "input"]);
+  test("its schema is the script's arguments, in order: agent, meeting, why, input, dry_run", () => {
+    expect(Object.keys(meta.schema.properties)).toEqual(["agent", "meeting", "why", "input", "dry_run"]);
     expect(meta.schema.required).toEqual(["agent"]);
-    expect(body).toMatch(/^agent="\$1"\ninput="\$\{2:-\}"\ndry_run="\$\{3:-false\}"$/m);
+    for (const name of ["meeting", "why", "input"]) expect(meta.schema.properties[name], name).toMatchObject({ type: "string", default: "" });
+    expect(body).toMatch(/^agent="\$1"\nmeeting="\$\{2:-\}"\nwhy="\$\{3:-\}"\ninput="\$\{4:-\}"\ndry_run="\$\{5:-false\}"$/m);
   });
 });
 
@@ -151,15 +152,16 @@ describe("workday start", async () => {
     expect(iter(null)).toEqual([]);
     expect(iter({ error: { message: "exit code 1" } })).toEqual([]);
   });
-  test("each briefing is given its meeting and the day's date", () => {
+  test("each briefing is given its meeting by ID (the gate's date and the triage's uid) and the triage's why", () => {
     const briefing = step("briefings").value.modules[0];
-    expect(briefing.value.input_transforms.agent).toEqual({ type: "static", value: "meeting-briefing" });
+    const t = briefing.value.input_transforms;
+    expect(t.agent).toEqual({ type: "static", value: "meeting-briefing" });
     expect(briefing.timeout).toEqual({ type: "static", value: 1500 });
-    const meeting = { calendar: "c", uid: "u1", start: "2026-11-09T10:00-06:00", title: "Sprint review", why: "w" };
-    const input = evalExpr(briefing.value.input_transforms.input.expr, {
-      results: { calendar_gate: { date: "2026-11-09" } }, flow_input: { iter: { value: meeting, index: 0 } },
-    });
-    expect(JSON.parse(input)).toEqual({ date: "2026-11-09", ...meeting });
+    expect(t.input).toBeUndefined();
+    const meeting = { calendar: "c", uid: "u1@example.org", start: "2026-11-09T10:00-06:00", title: "Sprint review", why: "w" };
+    const ctx = { results: { calendar_gate: { date: "2026-11-09" } }, flow_input: { iter: { value: meeting, index: 0 } } };
+    expect(evalExpr(t.meeting.expr, ctx)).toBe("2026-11-09/u1@example.org");
+    expect(evalExpr(t.why.expr, ctx)).toBe("w");
   });
   test("the check reads the gate, the triage and the loop", () => {
     const t = step("check").value.input_transforms;

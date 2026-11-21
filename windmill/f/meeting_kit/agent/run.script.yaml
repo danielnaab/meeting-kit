@@ -20,6 +20,24 @@ schema:
         - meeting-triage
         - meeting-briefing
       originalType: enum
+    meeting:
+      type: string
+      description: "meeting-briefing: the meeting, by its ID from `meeting-kit
+        meetings` (<date>/<uid>)"
+      default: ''
+      originalType: string
+    why:
+      type: string
+      description: "meeting-briefing: one line on why the meeting gets a
+        briefing (optional)"
+      default: ''
+      originalType: string
+    input:
+      type: string
+      description: "meeting-triage: the runner's --input, the calendar gate's day
+        as JSON (optional)"
+      default: ''
+      originalType: string
     dry_run:
       type: string
       description: "'true' stops after the runner's --dry-run (prompt and claude
@@ -29,12 +47,6 @@ schema:
         - 'false'
         - 'true'
       originalType: enum
-    input:
-      type: string
-      description: "The runner's --input: a JSON object (a calendar day, one
-        meeting), or empty"
-      default: ''
-      originalType: string
   required:
     - agent
 tag: agent

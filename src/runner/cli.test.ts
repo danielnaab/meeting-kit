@@ -6,6 +6,8 @@ const env = { MEETING_KIT_REMOTE: "ssh://git.example.com/sam/vault.git" };
 test("defaults: remote from the environment, today local", () => {
   expect(parseArgs(["meeting-synthesis"], env, new Date(2026, 10, 6, 23, 30))).toEqual({
     agent: "meeting-synthesis",
+    meeting: undefined,
+    why: undefined,
     input: undefined,
     dryRun: false,
     keep: false,
@@ -19,8 +21,10 @@ test("every flag", () => {
   const opts = parseArgs(
     [
       "meeting-briefing",
-      "--input",
-      '{"id":"e1"}',
+      "--meeting",
+      "2026-11-07/abc@example.org",
+      "--why",
+      "Open items from last time.",
       "--dry-run",
       "--keep",
       "--remote",
@@ -34,13 +38,28 @@ test("every flag", () => {
   );
   expect(opts).toEqual({
     agent: "meeting-briefing",
-    input: { id: "e1" },
+    meeting: "2026-11-07/abc@example.org",
+    why: "Open items from last time.",
+    input: undefined,
     dryRun: true,
     keep: true,
     remote: "/srv/repo.git",
     mcpConfigPath: "/etc/mcp.json",
     today: "2026-11-07",
   });
+});
+
+test("--input: the calendar gate's day, for meeting-triage", () => {
+  expect(parseArgs(["meeting-triage", "--input", '{"meetings":[]}'], env).input).toEqual({ meetings: [] });
+});
+
+test("--meeting takes an ID from `meeting-kit meetings`, and --why only goes with it", () => {
+  expect(() => parseArgs(["meeting-briefing", "--meeting", "u1@example.org"], env)).toThrow(
+    /--meeting u1@example.org is not a meeting ID \(<date>\/<uid>\).*meeting-kit meetings/s,
+  );
+  expect(() => parseArgs(["meeting-briefing", "--meeting", "2026-11-07/u1", "--input", "{}"], env)).toThrow(/--meeting or --input, not both/);
+  expect(() => parseArgs(["meeting-briefing", "--why", "x"], env)).toThrow(/--why goes with --meeting/);
+  expect(() => parseArgs(["meeting-briefing", "--meeting", "2026-11-07/u1", "--why", "two\nlines"], env)).toThrow(/--why must be one line/);
 });
 
 test("usage errors", () => {

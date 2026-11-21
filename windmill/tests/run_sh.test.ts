@@ -207,7 +207,7 @@ describe("run.sh", () => {
 
   test("the MCP config names the configured servers and holds no secret, only a reference", async () => {
     fakeRunner(ok);
-    await run(["meeting-briefing", '{"date":"2026-11-09","title":"Sprint review"}']);
+    await run(["meeting-briefing", "2026-11-09/u1@example.org"]);
     const text = readFileSync(join(dir, "mcp.json"), "utf8");
     expect(text).not.toContain(VARIABLES[config.mcp.apiKey.variable]);
     const mcp = JSON.parse(text);
@@ -219,12 +219,15 @@ describe("run.sh", () => {
     }
   });
 
-  test("passes the input and dry_run through", async () => {
+  test("passes the meeting, the why and dry_run through", async () => {
     fakeRunner({ ...ok, agent: "meeting-briefing", status: "dry-run" }, 0, "prompt:\nWrite the briefing");
-    const r = await run(["meeting-briefing", '{"date":"2026-11-09","title":"Sprint review"}', "true"]);
+    const r = await run(["meeting-briefing", "2026-11-09/u1@example.org", "Open items, last time", "", "true"]);
     expect(r.code, r.stderr).toBe(0);
     const args = readFileSync(join(dir, "runner.args"), "utf8").trim().split("\n");
-    expect(args.slice(1)).toEqual(["meeting-briefing", "--mcp-config", join(job, "mcp.json"), "--dry-run", "--input", '{"date":"2026-11-09","title":"Sprint review"}']);
+    expect(args.slice(1)).toEqual([
+      "meeting-briefing", "--mcp-config", join(job, "mcp.json"), "--dry-run",
+      "--meeting", "2026-11-09/u1@example.org", "--why", "Open items, last time",
+    ]);
     // The dry run's prompt goes to the job log, not into the result.
     expect(r.stderr).toContain("Write the briefing");
     expect(JSON.parse(readFileSync(join(job, "result.json"), "utf8")).status).toBe("dry-run");
@@ -233,7 +236,9 @@ describe("run.sh", () => {
   test("a structured answer reaches the result as `output`, for the next flow step", async () => {
     const triage = { agent: "meeting-triage", status: "no-changes", created: [], cost: 0.05, output: { meetings: [{ uid: "u1" }], skipped: [] } };
     fakeRunner(triage);
-    await run(["meeting-triage", '{"date":"2026-11-09","meetings":[{"uid":"u1"}]}']);
+    await run(["meeting-triage", "", "", '{"date":"2026-11-09","meetings":[{"uid":"u1"}]}']);
+    const args = readFileSync(join(dir, "runner.args"), "utf8").trim().split("\n");
+    expect(args.slice(-2)).toEqual(["--input", '{"date":"2026-11-09","meetings":[{"uid":"u1"}]}']);
     expect(JSON.parse(readFileSync(join(job, "result.json"), "utf8")).output).toEqual(triage.output);
   });
 
@@ -273,7 +278,7 @@ printf '%s' '"value"'`);
   });
 
   test("bad arguments stop before any secret is read", async () => {
-    for (const args of [["Meeting Synthesis"], [""], ["meeting-synthesis", "", "maybe"]]) {
+    for (const args of [["Meeting Synthesis"], [""], ["meeting-synthesis", "", "", "", "maybe"]]) {
       const r = await run(args);
       expect(r.code, args.join(",")).toBe(2);
     }
@@ -306,7 +311,7 @@ printf '%s\\n' '${JSON.stringify(ok)}'`);
       const saved = readFileSync(join(tools, app), "utf8");
       rmSync(join(tools, app));
       for (const dryRun of ["false", "true"]) {
-        const r = await run(["meeting-synthesis", "", dryRun]);
+        const r = await run(["meeting-synthesis", "", "", "", dryRun]);
         expect(r.code, dryRun).toBe(1);
         expect(r.stderr).toContain(`${tools}/${app} is missing`);
         expect(r.stderr).toContain(`the host builds the repository's tools package (meeting-kit, nb-index, check-kb, check-tasks) into ${checkout}/.local/tools`);

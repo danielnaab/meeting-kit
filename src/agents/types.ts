@@ -8,6 +8,8 @@
  * after it. The runner rejects the run, and pushes nothing, if any change falls outside `writes`.
  */
 
+import type { Meeting } from "../meetings/meetings.ts";
+
 /** Paths are inside the clone, relative to its root ("notebook/records/meetings/2026-11/x.md"). Globs use Bun.Glob. */
 export interface WriteScope {
   /** New files the model (or `finish`) may create. */
@@ -16,10 +18,21 @@ export interface WriteScope {
   modify: string[];
 }
 
+/** The meeting a run was given with `--meeting ID`, as the calendar has it now (../meetings/meetings.ts). */
+export interface RunMeeting extends Meeting {
+  /** The day the ID names (YYYY-MM-DD). */
+  date: string;
+  /** --why: why this meeting gets a briefing (the triage's one line), when the caller has one. */
+  why?: string;
+}
+
 export interface PrepareContext {
   root: string; // the clone
   today: string; // YYYY-MM-DD, local
-  input?: unknown; // the run's --input JSON, if any (a calendar event for a briefing, the day's events for triage)
+  /** --meeting, resolved against the calendar: only for an agent that `takes: "meeting"`. */
+  meeting?: RunMeeting;
+  /** The --input JSON, if any: only for an agent that `takes: "input"` (meeting-triage: the calendar gate's day). */
+  input?: unknown;
 }
 
 export interface Prepared {
@@ -37,6 +50,12 @@ export interface FinishResult {
 
 export interface AgentDefinition {
   name: string; // "meeting-synthesis"
+  /**
+   * What the agent takes from the command line, besides the common options: `"meeting"`, a required `--meeting ID`
+   * (with an optional `--why`); `"input"`, an optional `--input JSON`; absent, neither. Anything else is a usage
+   * error before the run starts.
+   */
+  takes?: "meeting" | "input";
   /** Instructions, relative to the repository root: appended to the system prompt. */
   instructions: string;
   model?: string; // "sonnet"; undefined means the profile default

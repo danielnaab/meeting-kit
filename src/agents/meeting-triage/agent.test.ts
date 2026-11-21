@@ -35,6 +35,7 @@ const day = {
 
 test("definition: read-only, structured answer, calendar server only", () => {
   expect(agent.name).toBe("meeting-triage");
+  expect(agent.takes).toBe("input");
   expect(agent.model).toBe("sonnet");
   expect(agent.writes).toEqual({ create: [], modify: [] });
   expect(agent.mcpServers).toEqual(["calendar"]);

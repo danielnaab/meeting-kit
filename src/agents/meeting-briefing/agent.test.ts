@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import type { RunMeeting } from "../types.ts";
 import agent, { earlierSyntheses } from "./agent.ts";
 
 // Synthetic fixtures only.
@@ -15,15 +16,18 @@ const read = (rel: string) => readFileSync(join(root, "notebook", rel), "utf8");
 const person = (slug: string, title: string, email: string) =>
   write(`wiki/people/${slug}.md`, `---\ntype: Person\ntitle: ${title}\naliases:\n  - "@${title}"\nemail: ${email}\n---\n\n# ${title}\n`);
 
-const event = {
+const event: RunMeeting = {
+  id: "2026-11-06/abc123@example.org",
   date: "2026-11-06",
   calendar: "work/someone@example.org",
   uid: "abc123@example.org",
   start: "2026-11-06T14:30:00-06:00",
+  end: "2026-11-06T15:00:00-06:00",
   title: "Widget Sync",
+  attendee_count: 4,
   why: "Open items from the last session.",
 };
-const ctx = (input: unknown = event) => ({ root, today: "2026-11-06", input });
+const ctx = (meeting: RunMeeting = event) => ({ root, today: "2026-11-06", meeting });
 const TARGET = "notebook/records/meetings/2026-11/2026-11-06-widget-sync-briefing.md";
 
 beforeEach(() => {
@@ -56,8 +60,15 @@ test("definition: tools, servers and write scope", () => {
   expect(existsSync(join(repo, agent.instructions))).toBe(true);
 });
 
+test("takes --meeting", () => {
+  expect(agent.takes).toBe("meeting");
+});
+
 test("prepare: the prompt names the event and the exact briefing path", () => {
   const { prompt } = agent.prepare(ctx())!;
+  expect(prompt).toContain('"why": "Open items from the last session."');
+  expect(prompt).not.toContain('"id"');
+  expect(prompt).not.toContain("attendee_count");
   expect(prompt).toContain(TARGET);
   expect(prompt).toContain('"uid": "abc123@example.org"');
   expect(prompt).toContain('"start": "2026-11-06T14:30:00-06:00"');
@@ -77,10 +88,8 @@ test("prepare: a second meeting with the same title that day gets the start time
   expect(agent.prepare(ctx())).toBeNull();
 });
 
-test("prepare: rejects input without a date or title", () => {
-  expect(() => agent.prepare(ctx({ ...event, title: undefined }))).toThrow(/meeting-briefing.*title/);
-  expect(() => agent.prepare(ctx({ ...event, date: "06/11/2026" }))).toThrow(/meeting-briefing.*date/);
-  expect(() => agent.prepare({ root, today: "2026-11-06" })).toThrow(/meeting-briefing/);
+test("prepare: without a meeting, says to pass --meeting", () => {
+  expect(() => agent.prepare({ root, today: "2026-11-06" })).toThrow(/meeting-briefing.*--meeting ID/);
 });
 
 test("earlierSyntheses: same slug, before the date, newest first, briefings and other series left out", () => {
@@ -113,16 +122,15 @@ test("prepare: says so when there are no earlier syntheses", () => {
   expect(agent.prepare(ctx())!.prompt).toMatch(/no earlier syntheses/i);
 });
 
-test("prepare: resolves attendees the input names against wiki/people", () => {
+test("prepare: resolves the calendar's organizer against wiki/people", () => {
   person("ada-lovelace", "Ada Lovelace", "ada@example.org");
   person("alan-turing", "Alan Turing", "alan@example.org");
   person("alan-kay", "Alan Kay", "kay@example.org");
-  const { prompt } = agent.prepare(
-    ctx({ ...event, organizer: "ada@example.org", attendees: ["Ada Lovelace <ada@example.org>", "Alan", "Grace Hopper <grace@example.org>"] }),
-  )!;
-  expect(prompt).toContain("Ada Lovelace <ada@example.org>: [Ada Lovelace](../../../wiki/people/ada-lovelace.md)");
-  expect(prompt).toMatch(/Alan: candidates .*Alan Kay.*Alan Turing/);
-  expect(prompt).toMatch(/Grace Hopper <grace@example.org>: no person note/);
+  const prompt = (organizer?: string) => agent.prepare(ctx({ ...event, organizer }))!.prompt;
+  expect(prompt("Ada Lovelace <ada@example.org>")).toContain("Ada Lovelace <ada@example.org>: [Ada Lovelace](../../../wiki/people/ada-lovelace.md)");
+  expect(prompt("Alan")).toMatch(/Alan: candidates .*Alan Kay.*Alan Turing/);
+  expect(prompt("grace@example.org")).toMatch(/grace@example.org: no person note/);
+  expect(prompt()).toMatch(/names no organizer.*get_event/);
 });
 
 test("finish: links the created briefing from the day's note under Work, once", () => {
@@ -138,7 +146,7 @@ test("finish: links the created briefing from the day's note under Work, once", 
   );
 });
 
-test("finish: falls back to the input's title, creates the daily note, ignores other files", () => {
+test("finish: falls back to the meeting's title, creates the daily note, ignores other files", () => {
   write("records/meetings/2026-11/2026-11-06-widget-sync-briefing.md", "---\ntype: Briefing\n---\n");
   agent.finish!({ ...ctx(), created: ["notebook/wiki/people/someone.md", TARGET] });
   expect(read("records/daily/2026-11/2026-11-06.md")).toContain(

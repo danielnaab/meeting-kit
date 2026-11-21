@@ -1,9 +1,10 @@
-import { expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentDefinition } from "../agents/types.ts";
 import { AgentRegistry } from "./registry.ts";
 import { main } from "./run.ts";
+import { calendarServer, event } from "../meetings/testkit.ts";
 import { configYaml, remoteFile, seedRemote, tempDir, writeFile } from "./testkit.ts";
 
 const SEED = { "meeting-kit.yaml": configYaml(), "README.md": "x\n" };
@@ -121,4 +122,77 @@ test("MEETING_KIT_REMOTE is the default remote", async () => {
   });
   expect(code, o.err.join("\n")).toBe(0);
   expect(o.err.join("\n")).toContain(`cloned ${remote}`);
+});
+
+describe("--meeting: meeting-briefing reads its meeting from the calendar", () => {
+  const cal = calendarServer(() => ({ count: 1, events: [event()] }));
+  afterAll(() => cal.stop());
+  const ID = "2026-11-09/u1@example.org";
+  const briefingRemote = () => seedRemote({ "meeting-kit.yaml": configYaml({ calendarUrl: cal.url }), "README.md": "x\n" });
+  const ENV = { MCP_API_KEY: "test-key" };
+
+  test("a dry run prompts with the meeting the calendar has under that ID, and the --why", async () => {
+    const o = io();
+    const code = await main(
+      ["meeting-briefing", "--meeting", ID, "--why", "Open items from last time.", "--dry-run", "--today", "2026-11-09", "--remote", briefingRemote()],
+      { env: ENV, model: unusedModel, ...o },
+    );
+    expect(code, o.err.join("\n")).toBe(0);
+    expect(JSON.parse(o.out.at(-1)!).status).toBe("dry-run");
+    const prompt = o.out.slice(0, -1).join("\n");
+    expect(prompt).toContain("notebook/records/meetings/2026-11/2026-11-09-sprint-review-briefing.md");
+    expect(prompt).toContain('"uid": "u1@example.org"');
+    expect(prompt).toContain('"start": "2026-11-09T10:00:00-07:00"');
+    expect(prompt).toContain('"why": "Open items from last time."');
+    expect(cal.calls.at(-1)).toMatchObject({ name: "Calendar__events", args: { start: "2026-11-09", end: "2026-11-09" }, key: "test-key" });
+  });
+
+  test("an ID the calendar doesn't list fails the run, naming the command that lists them", async () => {
+    const o = io();
+    const code = await main(["meeting-briefing", "--meeting", "2026-11-09/gone@example.org", "--dry-run", "--remote", briefingRemote()], {
+      env: ENV,
+      model: unusedModel,
+      ...o,
+    });
+    expect(code).toBe(1);
+    expect(JSON.parse(o.out.at(-1)!).error).toMatch(/no meeting 2026-11-09\/gone@example.org.*meeting-kit meetings --date 2026-11-09/);
+  });
+
+  test("the calendar key's variable unset fails the run, naming it", async () => {
+    const o = io();
+    const code = await main(["meeting-briefing", "--meeting", ID, "--dry-run", "--remote", briefingRemote()], { env: {}, model: unusedModel, ...o });
+    expect(code).toBe(1);
+    expect(JSON.parse(o.out.at(-1)!).error).toMatch(/MCP_API_KEY is not set/);
+  });
+});
+
+describe("each agent takes only its own argument (exit 2, before any clone)", () => {
+  const nowhere = "/nonexistent/remote.git";
+  const usage = async (argv: string[]) => {
+    const o = io();
+    const code = await main([...argv, "--remote", nowhere], { env: {}, model: unusedModel, ...o });
+    expect(o.out).toEqual([]);
+    expect(o.err.join("\n")).not.toContain("cloned");
+    return { code, err: o.err.join("\n") };
+  };
+
+  test("meeting-briefing needs --meeting", async () => {
+    const r = await usage(["meeting-briefing"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/meeting-briefing needs --meeting ID; list the IDs with: meeting-kit meetings/);
+  });
+  test("meeting-briefing no longer takes --input", async () => {
+    const r = await usage(["meeting-briefing", "--input", '{"date":"2026-11-09","title":"x"}']);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/meeting-briefing takes --meeting ID, not --input.*meeting-kit meetings/s);
+  });
+  test("meeting-triage takes --input, not --meeting", async () => {
+    const r = await usage(["meeting-triage", "--meeting", "2026-11-09/u1"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/meeting-triage does not take --meeting/);
+  });
+  test("meeting-synthesis takes neither", async () => {
+    expect((await usage(["meeting-synthesis", "--input", "{}"])).code).toBe(2);
+    expect((await usage(["meeting-synthesis", "--meeting", "2026-11-09/u1"])).code).toBe(2);
+  });
 });

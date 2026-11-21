@@ -1,7 +1,7 @@
 /**
  * meeting-kit: the kit's one command.
  *
- *   meeting-kit run <agent> [--input JSON] [--dry-run] [--keep] [--remote URL] [--mcp-config PATH] [--today DATE]
+ *   meeting-kit run <agent> [--meeting ID [--why TEXT] | --input JSON] [--dry-run] [--keep] [--remote URL] [--mcp-config PATH] [--today DATE]
  *   meeting-kit meetings [--json] [--date DATE] [--root DIR]   the meetings `run meeting-briefing --meeting` accepts
  *   meeting-kit render [--root DIR] [--check]    write (or check) the repository's windmill/ tree from its config
  *   meeting-kit check-config [--root DIR]        validate the repository's meeting-kit.yaml

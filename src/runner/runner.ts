@@ -14,8 +14,10 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { AgentDefinition } from "../agents/types.ts";
+import type { AgentDefinition, RunMeeting } from "../agents/types.ts";
 import { type AgentName, loadConfig, type MeetingKitConfig } from "../config/config.ts";
+import { CalendarSetupError, calendarClient, findMeeting, MeetingNotFound } from "../meetings/meetings.ts";
+import type { McpClient } from "../../windmill/f/meeting_kit/shared/mcp.ts";
 import { buildClaudeArgs, filterMcpConfig, type ModelRunner } from "./claude.ts";
 import type { RunOptions } from "./cli.ts";
 import { clone, commitAll, exec, type Identity, push, status } from "./git.ts";
@@ -76,6 +78,8 @@ export interface RunnerDeps {
   log?: (line: string) => void;
   /** Dry-run output (stdout). */
   print?: (text: string) => void;
+  /** The calendar server's client, for --meeting. Defaults to the config's calendar server and process.env's key. */
+  calendar?: (config: MeetingKitConfig) => McpClient;
 }
 
 class RunFailure extends Error {}
@@ -116,7 +120,8 @@ export async function runAgent(opts: RunOptions, deps: RunnerDeps): Promise<RunS
       config,
       readAppendix(first.root, config.instructions[opts.agent as AgentName]),
     );
-    const prepared = agent.prepare({ root: first.root, today: opts.today, input: opts.input });
+    const meeting = opts.meeting === undefined ? undefined : await resolveMeeting(opts, config, deps, log);
+    const prepared = agent.prepare({ root: first.root, today: opts.today, meeting, input: opts.input });
     if (prepared === null) {
       log("nothing to do");
       summary.status = "nothing-to-do";
@@ -169,7 +174,7 @@ export async function runAgent(opts: RunOptions, deps: RunnerDeps): Promise<RunS
         target = await freshClone();
         replayCreated(target.root, outcome.files);
       }
-      const { committed, notices } = await finishAndCommit(agent, opts, config.identity, target.root, created, outcome.output, checks, log);
+      const { committed, notices } = await finishAndCommit(agent, opts, meeting, config.identity, target.root, created, outcome.output, checks, log);
       if (notices.length > 0) summary.notices = notices;
       if (!committed) {
         log("no changes; nothing to commit");
@@ -203,6 +208,7 @@ export async function runAgent(opts: RunOptions, deps: RunnerDeps): Promise<RunS
 async function finishAndCommit(
   agent: AgentDefinition,
   opts: RunOptions,
+  meeting: RunMeeting | undefined,
   identity: Identity,
   root: string,
   created: string[],
@@ -213,7 +219,7 @@ async function finishAndCommit(
   let notices: string[] = [];
   if (agent.finish) {
     try {
-      notices = agent.finish({ root, today: opts.today, input: opts.input, created, output })?.notices ?? [];
+      notices = agent.finish({ root, today: opts.today, meeting, input: opts.input, created, output })?.notices ?? [];
     } catch (err) {
       throw new RunFailure(`finish failed: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -258,6 +264,25 @@ export function commitMessage(agent: string, created: string[]): string {
   if (created.length === 0) return `${agent}: update notes`;
   const subject = `${agent}: create ${created.length} file${created.length === 1 ? "" : "s"}`;
   return `${subject}\n\nCreated:\n${created.map((c) => `- ${c}`).join("\n")}\n`;
+}
+
+/** --meeting, read from the calendar now: the meeting the ID names, with --why. */
+async function resolveMeeting(
+  opts: RunOptions,
+  config: MeetingKitConfig,
+  deps: RunnerDeps,
+  log: (line: string) => void,
+): Promise<RunMeeting> {
+  let found;
+  try {
+    const client = (deps.calendar ?? ((c) => calendarClient(c, process.env)))(config);
+    found = await findMeeting(client, config, opts.meeting!);
+  } catch (err) {
+    if (err instanceof MeetingNotFound || err instanceof CalendarSetupError) throw new RunFailure(err.message);
+    throw new RunFailure(`cannot read meeting ${opts.meeting} from the calendar ${config.calendar.id}: ${(err as Error).message}`);
+  }
+  log(`meeting ${found.id}: ${found.title} at ${found.start}`);
+  return opts.why === undefined ? found : { ...found, why: opts.why };
 }
 
 function readMcpConfig(path: string | undefined): unknown {
