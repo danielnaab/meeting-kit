@@ -45,8 +45,8 @@ needs, and spend the effort where the triage's `why` points.
   is not a record of what happened.
 - **The people.** For each attendee other than {{owner.short}}: use the prompt's resolution when it has one.
   Otherwise, if the contacts tools are available, `search_contacts` by email to put a name and organisation to an
-  address; then `Grep` the email or full name in `notebook/wiki/people/` (person notes carry `title`, `aliases` and
-  `email` in their frontmatter). Read the person's note, and `Grep` recent notes in `notebook/records/meetings/` and
+  address; then `Grep` the email or full name in `notebook/wiki/people/` (a person note is named by the person's name,
+  `Ada Lovelace.md`, and carries `aliases` and `email` in its frontmatter; older notes also a `title`). Read the person's note, and `Grep` recent notes in `notebook/records/meetings/` and
   `notebook/records/daily/` for the last mentions. One line per person: who they are to {{owner.short}} and the
   last thing that happened between them. Large meetings: the organizer and the people {{owner.short}} deals with,
   not the whole roster.
@@ -79,7 +79,7 @@ sources:
   - id: 2026-10-09-widget-sync
     resource: "../2026-10/2026-10-09-widget-sync.md"
   - id: ada-lovelace
-    resource: "../../../wiki/people/ada-lovelace.md"
+    resource: "../../../wiki/people/Ada%20Lovelace.md"
 ---
 
 > *Briefing gathered before the meeting from the calendar invite and the vault. It is what was already written down, not what will happen.*
@@ -90,7 +90,7 @@ sources:
 
 ## People
 
-- [Full Name](../../../wiki/people/full-name.md) - who they are to {{owner.short}}; the last thing that happened between them, with a link
+- [Full Name](../../../wiki/people/Full%20Name.md) - who they are to {{owner.short}}; the last thing that happened between them, with a link
 
 ## Last time
 
@@ -118,11 +118,12 @@ Conventions:
 
 - **Links are relative Markdown links** from the briefing's own folder (`notebook/records/meetings/YYYY-MM/`) that
   stay inside `notebook/`: a meeting in the same month is `YYYY-MM-DD-<slug>.md`, another month
-  `../YYYY-MM/YYYY-MM-DD-<slug>.md`, a person `../../../wiki/people/<slug>.md`. No wikilinks (`[[…]]`), no
-  absolute paths. Link only to files you have seen exist. Label a meeting link `YYYY-MM-DD - <title>`.
+  `../YYYY-MM/YYYY-MM-DD-<slug>.md`, a person `../../../wiki/people/<file name>` with each space written `%20`
+  (`Ada%20Lovelace.md`). No wikilinks (`[[…]]`), no absolute paths. Link only to files you have seen exist.
+  Label a meeting link `YYYY-MM-DD - <title>`.
 - **`sources` frontmatter** lists every vault note the briefing draws on (earlier meetings and people notes), each
-  with `id` (the file name without `.md`) and `resource` (the same relative link, quoted). The `## Sources` section
-  repeats them for readers and adds the event's URL.
+  with `id` (the file name without `.md`, lowercase, spaces as hyphens: `ada-lovelace`) and `resource` (the same
+  relative link, quoted). The `## Sources` section repeats them for readers and adds the event's URL.
 - **Frontmatter:** `type: Briefing`, `time` quoted, `attendees` as quoted `"Full Name <email>"` strings (plain
   names, not links), `agent_generated: true`, `agent_version: 2`. Space-indented; nested bullets in the body take
   **one tab** per level.

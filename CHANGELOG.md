@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.5.0 - unreleased
+
+People notes are named by the person's name, as notebook-kit v2.3.0 names wiki pages: `wiki/people/Ada Lovelace.md`,
+with no `title` or heading repeating it, so Obsidian's `[[` autocomplete and link text show the name. Vaults whose
+people notes are still slug-named with a `title` keep working.
+
+### Changed
+
+- **People resolve by filename too.** A person note's name is its `title` when it has one, else its filename, so a
+  note without `title` is found (before, it was skipped).
+- **New people notes are named by the name** (`createPerson`, `people.ts create`): `wiki/people/Robin Hart.md`
+  with `aliases: ["@Robin Hart"]` and no `title` or `# heading`. A name a filename can't hold
+  (`: / \ ? * " < > | # ^ [ ]`) gets the nearest filename, `Jo / Joanne Park` -> `Jo - Joanne Park.md`, and keeps
+  `title`.
+- **Links to people are percent-encoded** (`../../../wiki/people/Ada%20Lovelace.md`): the resolutions
+  meeting-briefing and meeting-synthesis put in their prompts. Before, a space was written as is, which breaks a
+  Markdown link.
+- **Agent instructions** (meeting-synthesis, meeting-briefing, meeting-triage): person notes are named by the
+  person's name; link to the file name found, spaces as `%20`, never a slug guessed from the name; new person
+  notes (synthesis) have no `title` or heading.
+- `src/vault/names.ts`: `fileName` (mirrors notebook-kit's `names.py`) and `linkPath`.
+
+### Upgrading
+
+1. `just upgrade meeting-kit@v0.5.0`, then `just meeting-render` and commit the rendered `windmill/` with it.
+   `meeting-kit.yaml` is unchanged (`version: 1`).
+2. Optional: rename existing people notes with notebook-kit v2.3.0's `just names --fix notebook/wiki/people`
+   (or the whole `wiki/`). Before that, the agents keep resolving the slug-named notes by `title`.
+3. Local instructions (`instructions.<agent>`) that give people's paths as slugs: give the file names instead.
+4. Done when `just meeting-check` and `just check` pass.
+
 ## v0.4.0 - 2026-11-21
 
 The command gains typed arguments a caller can validate: `meeting-briefing` takes a meeting by ID instead of free

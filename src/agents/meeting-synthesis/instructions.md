@@ -115,7 +115,7 @@ Body:
 
 ## People Mentioned
 
-- [Full Name](../../../wiki/people/full-name.md) — how they came up, their role if stated.
+- [Full Name](../../../wiki/people/Full%20Name.md) — how they came up, their role if stated.
 
 ## Notes
 
@@ -123,8 +123,9 @@ Body:
 ```
 
 - One blank line around each heading. Nested bullets are indented with one tab per level.
-- Links are relative Markdown links. From a synthesis note, a person is `../../../wiki/people/<slug>.md` and
-  the transcript is `../../../raw/meetings/YYYY-MM/<name>.md`. No wikilinks.
+- Links are relative Markdown links. From a synthesis note, a person is `../../../wiki/people/<file name>`, the
+  note's file name as it is, with each space written `%20` (`Ada%20Lovelace.md`), and the transcript is
+  `../../../raw/meetings/YYYY-MM/<name>.md`. Link only to person notes you have seen exist. No wikilinks.
 - A thin or mostly unintelligible transcript gets a minimal note that says so, not a reconstruction.
 - One note covers one meeting: no cross-meeting patterns, no "as discussed last week".
 - **Several conversations in one recording:** give each its own `###` section under Key Topics, say so in the
@@ -144,22 +145,23 @@ Link people to their notes in `notebook/wiki/people/`. A wrong link is worse tha
 
 1. **Attendees** come pre-resolved in the prompt: use the given link. For candidates, pick one only when the
    meeting's context clearly decides it; otherwise leave plain text.
-2. **Other names** in the transcript: Grep `notebook/wiki/people/` for the name (titles and `"@Name"` aliases
-   are in each note's frontmatter; emails in `email`/`emails`). Decode email usernames as a signal
+2. **Other names** in the transcript: Grep `notebook/wiki/people/` for the name. A person note is named by the
+   person's name (`Ada Lovelace.md`); its frontmatter has an `"@Name"` alias for each name (and, in older notes,
+   a `title`), and emails in `email`/`emails`. Decode email usernames as a signal
    (`rdiaz@` → R. Diaz). ASR mishears names: an edit distance of one or two, or a phonetic match, with supporting
    context, is a high-confidence match.
 3. **Exact match:** link it. **High-confidence match** (first name, nickname, ASR variant, clear from context):
    link with the transcript's wording flagged, `[Full Name](…) (?transcript said: "Jim")`. **Ambiguous or low
    signal:** plain text, and say why.
 4. **Someone new:** create a draft person note only for a real participant or clearly named person whose full
-   name is plain in the transcript or attendees and who matches no note (Grep the title, alias, and email
-   first). First names, garbled names, and ASR guesses stay plain text. The note's file is the name slugified
-   (`notebook/wiki/people/ada-lovelace.md`), in exactly this shape:
+   name is plain in the transcript or attendees and who matches no note (Grep the name, alias, and email
+   first). First names, garbled names, and ASR guesses stay plain text. The note's file is the full name as
+   written, with spaces and capitals (`notebook/wiki/people/Ada Lovelace.md`); a name holding any of
+   `: / \ ? * " < > | # ^ [ ]` stays plain text. In exactly this shape:
 
    ```markdown
    ---
    type: Person
-   title: Ada Lovelace
    aliases:
      - "@Ada Lovelace"
    email: ada@example.org
@@ -168,11 +170,10 @@ Link people to their notes in `notebook/wiki/people/`. A wrong link is worse tha
      - id: <synthesis file name without .md>
        resource: "../../records/meetings/YYYY-MM/<synthesis file name>"
    ---
-
-   # Ada Lovelace
    ```
 
-   Omit `email` when unknown (lowercase it when known). Add nothing else: no role, no facts, no body.
+   Omit `email` when unknown (lowercase it when known). Add nothing else: no `title` (the file name is the
+   name), no heading, no role, no facts, no body.
 
 Local rules may list known variants (names ASR mishears, nicknames, phantom names): resolve them as they say,
 with the flag, and let Grep confirm the path.

@@ -11,6 +11,7 @@ import { join, posix } from "node:path";
 import { appendDaily, dailyPath } from "../../vault/daily.ts";
 import { splitNote } from "../../vault/frontmatter.ts";
 import { MEETINGS, meetingFile } from "../../vault/meetings.ts";
+import { linkPath } from "../../vault/names.ts";
 import { People } from "../../people/people.ts";
 import { CALENDAR_READS, CONTACTS_READS, RECORDS_READS } from "../mcp-tools.ts";
 import type { AgentDefinition, FinishContext, PrepareContext, RunMeeting } from "../types.ts";
@@ -67,7 +68,7 @@ export function earlierSyntheses(root: string, slug: string, date: string, limit
 }
 
 function link(from: string, to: string, label: string): string {
-  return `[${label.replace(/([[\]])/g, "\\$1")}](${posix.relative(posix.dirname(from), to)})`;
+  return `[${label.replace(/([[\]])/g, "\\$1")}](${linkPath(posix.relative(posix.dirname(from), to))})`;
 }
 
 function attendeeLines(root: string, target: string, event: BriefingInput): string[] {

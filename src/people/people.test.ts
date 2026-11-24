@@ -50,23 +50,35 @@ test("an unknown name is unknown", () => {
   expect(resolve("   ")).toEqual({ status: "unknown" });
 });
 
-test("createPerson writes a draft note citing the meeting, and refuses an existing one", () => {
+test("a note named by the person's name needs no title", () => {
+  writeFileSync(join(root, "notebook/wiki/people/Sam Ortiz.md"), '---\ntype: Person\naliases:\n  - "@Sam Ortiz"\n---\n');
+  expect(resolve("sam ortiz")).toEqual({ status: "found", person: { title: "Sam Ortiz", path: "wiki/people/Sam Ortiz.md" } });
+  expect(resolve("Sam")).toMatchObject({ status: "candidates", candidates: [{ title: "Sam Ortiz" }] });
+});
+
+test("createPerson writes a draft note named by the person's name, citing the meeting, and refuses an existing one", () => {
   const path = createPerson(root, {
-    name: "Robin Hart",
+    name: "Robin  Hart",
     email: "robin@example.org",
     source: "records/meetings/2026-11/2026-11-05-weekly-sync.md",
   });
-  expect(path).toBe("wiki/people/robin-hart.md");
+  expect(path).toBe("wiki/people/Robin Hart.md");
   const { frontmatter, body } = splitNote(readFileSync(join(root, "notebook", path), "utf8"));
   expect(frontmatter).toEqual({
     type: "Person",
-    title: "Robin Hart",
     aliases: ["@Robin Hart"],
     email: "robin@example.org",
     status: "draft",
     sources: [{ id: "2026-11-05-weekly-sync", resource: "../../records/meetings/2026-11/2026-11-05-weekly-sync.md" }],
   });
-  expect(body).toBe("\n# Robin Hart\n");
+  expect(body).toBe("");
   expect(People.load(root).resolve("Robin Hart")).toMatchObject({ status: "found" });
   expect(() => createPerson(root, { name: "Pat Lee", source: "records/meetings/2026-11/2026-11-05-weekly-sync.md" })).toThrow(/exists/);
+});
+
+test("createPerson keeps a name its file can't hold in title", () => {
+  const path = createPerson(root, { name: "Jo / Joanne Park", source: "records/meetings/2026-11/2026-11-05-weekly-sync.md" });
+  expect(path).toBe("wiki/people/Jo - Joanne Park.md");
+  expect(splitNote(readFileSync(join(root, "notebook", path), "utf8")).frontmatter).toMatchObject({ title: "Jo / Joanne Park" });
+  expect(People.load(root).resolve("Jo / Joanne Park")).toMatchObject({ status: "found", person: { title: "Jo / Joanne Park" } });
 });

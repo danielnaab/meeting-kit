@@ -22,7 +22,8 @@ const person = (title: string, email?: string) =>
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "synthesis-"));
   write("notebook/templates/daily.md", "---\ntype: Daily Note\n---\n\nDaily note for {{date}}.\n\n## Activity\n");
-  write("notebook/wiki/people/ada-lovelace.md", person("Ada Lovelace", "ada@example.org"));
+  // a note named by the person's name, with no title (the convention), beside older slug-named ones
+  write("notebook/wiki/people/Ada Lovelace.md", `---\ntype: Person\naliases:\n  - "@Ada Lovelace"\nemail: ada@example.org\n---\n`);
   write("notebook/wiki/people/grace-hopper.md", person("Grace Hopper"));
   write("notebook/wiki/people/grace-kelly.md", person("Grace Kelly"));
 });
@@ -48,7 +49,7 @@ describe("definition", () => {
     expect(creates("notebook/records/meetings/2026-11/sub/x.md")).toBe(false);
     expect(creates("notebook/records/daily/2026-11/2026-11-05.md")).toBe(false);
     expect(modifies("notebook/records/daily/2026-11/2026-11-05.md")).toBe(true);
-    expect(modifies("notebook/wiki/people/ada-lovelace.md")).toBe(false);
+    expect(modifies("notebook/wiki/people/Ada Lovelace.md")).toBe(false);
   });
 });
 
@@ -79,7 +80,7 @@ describe("prepare", () => {
     );
     const prompt = prepare()!.prompt;
     expect(prompt).toContain("A. Lovelace <ada@example.org>");
-    expect(prompt).toMatch(/A\. Lovelace <ada@example\.org>.*\[Ada Lovelace\]\(\.\.\/\.\.\/\.\.\/wiki\/people\/ada-lovelace\.md\)/);
+    expect(prompt).toMatch(/A\. Lovelace <ada@example\.org>.*\[Ada Lovelace\]\(\.\.\/\.\.\/\.\.\/wiki\/people\/Ada%20Lovelace\.md\)/);
     expect(prompt).toMatch(/Grace\b.*candidates.*Grace Hopper.*grace-hopper\.md.*Grace Kelly.*grace-kelly\.md/);
     expect(prompt).toMatch(/Nobody Known <nobody@example\.org>.*unknown/);
   });

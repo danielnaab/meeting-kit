@@ -65,8 +65,8 @@ The working directory is a clone of the repository; the vault is `notebook/`. Re
   `…-<slug>-briefing.md`; they are not a record of what happened. `Glob` for
   `notebook/records/meetings/*/????-??-??-<slug>.md` finds a series; read the newest one or two and look for open
   `- [ ]` action items and pending decisions.
-- **People** are notes at `notebook/wiki/people/<name-slug>.md`, with `title`, `aliases` and `email` in their
-  frontmatter. `Grep` an email address or name there to see whether {{owner.short}} already knows someone.
+- **People** are notes at `notebook/wiki/people/<Full Name>.md`, named by the person's name, with `aliases` and
+  `email` in their frontmatter (older notes also a `title`). `Grep` an email address or name there to see whether {{owner.short}} already knows someone.
 - **Daily notes** at `notebook/records/daily/YYYY-MM/YYYY-MM-DD.md` show recent work, if a meeting's subject needs
   it.
 

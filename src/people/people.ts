@@ -5,14 +5,15 @@
  *   bun src/people/people.ts resolve [--root .] QUERY...          one JSON result per query
  *   bun src/people/people.ts create [--root .] --name N --source MEETING [--email E]
  *
- * A match is exact on an email, title, or @alias, ignoring case and accents. A query matching only first names
- * gives candidates; the caller decides.
+ * A match is exact on an email, name, or @alias, ignoring case and accents. A query matching only first names
+ * gives candidates; the caller decides. A person's name is the note's filename ("Pat Lee.md"), or its `title`
+ * when it has one (older vaults name notes by slug and keep the name there).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, posix, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import { renderFrontmatter, splitNote } from "../vault/frontmatter.ts";
-import { slugify } from "../vault/slug.ts";
+import { fileName } from "../vault/names.ts";
 
 export const PEOPLE = "wiki/people";
 
@@ -53,10 +54,11 @@ export class People {
     const names = existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".md") && n !== "index.md").sort() : [];
     for (const name of names) {
       const meta = splitNote(readFileSync(join(dir, name), "utf8")).frontmatter;
-      if (meta?.type !== "Person" || typeof meta.title !== "string") continue;
-      const ref = { title: meta.title, path: `${PEOPLE}/${name}` };
+      if (meta?.type !== "Person") continue;
+      const title = typeof meta.title === "string" && meta.title.trim() ? meta.title.trim() : name.slice(0, -".md".length);
+      const ref = { title, path: `${PEOPLE}/${name}` };
       all.push(ref);
-      for (const n of [meta.title, ...strings(meta.aliases)]) add(byName, normalize(n), ref);
+      for (const n of [title, ...strings(meta.aliases)]) add(byName, normalize(n), ref);
       for (const e of [...strings(meta.email), ...strings(meta.emails)]) add(byEmail, e.toLowerCase(), ref);
     }
     return new People(byName, byEmail, all);
@@ -79,24 +81,29 @@ export class People {
   }
 }
 
-/** Write a draft person note citing the meeting that introduced them; returns its path inside notebook/. */
+/**
+ * Write a draft person note citing the meeting that introduced them, named by the person's name
+ * (`wiki/people/Pat Lee.md`); returns its path inside notebook/.
+ */
 export function createPerson(root: string, { name, email, source }: { name: string; email?: string; source: string }): string {
-  const title = name.trim();
-  const path = `${PEOPLE}/${slugify(title)}.md`;
+  const title = name.normalize("NFC").trim().split(/\s+/).join(" ");
+  const stem = fileName(title);
+  const path = `${PEOPLE}/${stem}.md`;
   const file = join(root, "notebook", path);
-  if (!slugify(title)) throw new Error("people: a person needs a name");
+  if (!stem) throw new Error("people: a person needs a name");
   if (existsSync(file) || People.load(root).resolve(title).status === "found") throw new Error(`people: ${title} already exists`);
   const id = posix.basename(source, ".md");
   const frontmatter = renderFrontmatter({
     type: "Person",
-    title,
+    // the filename is the name; `title` only keeps a name the filename can't hold
+    ...(stem === title ? {} : { title }),
     aliases: [`@${title}`],
     email: email?.toLowerCase(),
     status: "draft",
     sources: [{ id, resource: posix.relative(PEOPLE, source) }],
   });
   mkdirSync(join(root, "notebook", PEOPLE), { recursive: true });
-  writeFileSync(file, `${frontmatter}\n# ${title}\n`, { flag: "wx" });
+  writeFileSync(file, frontmatter, { flag: "wx" });
   return path;
 }
 

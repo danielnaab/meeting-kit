@@ -13,6 +13,7 @@ import type { AgentDefinition, FinishContext, FinishResult, PrepareContext, Prep
 import { appendDaily, dailyPath } from "../../vault/daily.ts";
 import { splitNote } from "../../vault/frontmatter.ts";
 import { MEETINGS, meetingFile, pendingTranscripts, TRANSCRIPTS } from "../../vault/meetings.ts";
+import { linkPath } from "../../vault/names.ts";
 import { People, PEOPLE, type PersonRef, type Resolution } from "../../people/people.ts";
 
 export const MAX_MEETINGS = 4;
@@ -43,7 +44,7 @@ const strings = (value: unknown): string[] =>
   (Array.isArray(value) ? value : [value]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
 
 /** A Markdown link to a person note from a synthesis note (records/meetings/YYYY-MM/). */
-const personLink = (from: string, p: PersonRef) => `[${p.title}](${posix.relative(posix.dirname(from), p.path)})`;
+const personLink = (from: string, p: PersonRef) => `[${p.title}](${linkPath(posix.relative(posix.dirname(from), p.path))})`;
 
 function describeAttendee(from: string, attendee: string, resolution: Resolution): string {
   switch (resolution.status) {

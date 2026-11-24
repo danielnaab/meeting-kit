@@ -124,11 +124,11 @@ test("prepare: says so when there are no earlier syntheses", () => {
 
 test("prepare: resolves the calendar's organizer against wiki/people", () => {
   person("ada-lovelace", "Ada Lovelace", "ada@example.org");
-  person("alan-turing", "Alan Turing", "alan@example.org");
+  write("wiki/people/Alan Turing.md", `---\ntype: Person\naliases:\n  - "@Alan Turing"\nemail: alan@example.org\n---\n`);
   person("alan-kay", "Alan Kay", "kay@example.org");
   const prompt = (organizer?: string) => agent.prepare(ctx({ ...event, organizer }))!.prompt;
   expect(prompt("Ada Lovelace <ada@example.org>")).toContain("Ada Lovelace <ada@example.org>: [Ada Lovelace](../../../wiki/people/ada-lovelace.md)");
-  expect(prompt("Alan")).toMatch(/Alan: candidates .*Alan Kay.*Alan Turing/);
+  expect(prompt("Alan")).toMatch(/Alan: candidates .*Alan Kay.*\[Alan Turing\]\(\.\.\/\.\.\/\.\.\/wiki\/people\/Alan%20Turing\.md\)/);
   expect(prompt("grace@example.org")).toMatch(/grace@example.org: no person note/);
   expect(prompt()).toMatch(/names no organizer.*get_event/);
 });
