@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.0 - unreleased
+## v0.5.0 - 2026-11-24
 
 People notes are named by the person's name, as notebook-kit v2.3.0 names wiki pages: `wiki/people/Ada Lovelace.md`,
 with no `title` or heading repeating it, so Obsidian's `[[` autocomplete and link text show the name. Vaults whose
