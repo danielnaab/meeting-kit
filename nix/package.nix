@@ -1,7 +1,7 @@
 # The `meeting-kit` command, built from the kit's own source: in a consuming repository, graft's store copy of the
 # submodule, never the repository itself, so the repository's content (meeting transcripts) never enters the Nix store.
 #
-# graft.nix calls it with the kit's pinned bun; a repository that grafts the kit (graft v2.13.0 or later) gets it in
+# pattern.nix calls it with the kit's pinned bun; a repository that grafts the kit (graft v2.13.0 or later) gets it in
 # its tools with no wiring of its own. The scion (scions/meeting-kit/) and this package are the same commit, so what
 # people read and what runs agree.
 { pkgs, bun ? pkgs.bun }:

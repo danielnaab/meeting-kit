@@ -13,7 +13,7 @@ pattern meeting-kit uses, so another kit with code can follow it.
 | Code, templates, recipes, docs | The kit, at a semver tag | Content-neutral and reusable; tested in the kit's own repository |
 | What the consumer is (names, servers, schedules, deployment) | `<kit>.yaml` at the consumer's top | One versioned file per kit, validated strictly by the kit, so a typo fails loudly |
 | Local prose (rules an agent must follow here) | Markdown files the config names | Read at run time from the consumer, appended to the kit's templates |
-| The runnable command | `nix/package.nix` in the kit, wired by the kit's `graft.nix` into the consumer's graft tools | Runs from graft's Nix store copy of the submodule alone, so the consumer's own source (which may hold private content) never enters the store; the kit pins its own bun there, so it runs on the bun it is tested with |
+| The runnable command | `nix/package.nix` in the kit, wired by the kit's `pattern.nix` into the consumer's graft tools | Runs from graft's Nix store copy of the submodule alone, so the consumer's own source (which may hold private content) never enters the store; the kit pins its own bun there, so it runs on the bun it is tested with |
 | Deployment content (here, Windmill flows) | Rendered by `<kit> render` into the consumer's own tree, and committed | Reviewable: a kit upgrade or a config change shows up as a diff; the deploy side reads plain files from the checkout and needs no knowledge of the kit |
 | Operations | `<kit>.just`, imported by the consumer's justfile | One menu (`just`); the consumer calls `<kit>-check` from `check-local`'s body (as a dependency, it breaks `import?` in a clone whose scions are empty) |
 

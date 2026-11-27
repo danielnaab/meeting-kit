@@ -1,5 +1,5 @@
 # The kit's development flake: its package, a dev shell, and the tests as a check. Consumers don't use it: graft's
-# mkFlake reads graft.nix from their submodule. The package here is graft.nix's tool, so it is defined once.
+# mkFlake reads pattern.nix from their submodule. The package here is pattern.nix's tool, so it is defined once.
 {
   description = "meeting-kit: content-neutral meeting agents (synthesis, triage, briefing) for Markdown work-memory vaults";
 
@@ -13,7 +13,7 @@
     in
     {
       packages = forAll (pkgs: rec {
-        meeting-kit = (import ./graft.nix { inherit pkgs; inherit (pkgs) lib; system = pkgs.stdenv.hostPlatform.system; }).tools.meeting-kit;
+        meeting-kit = (import ./pattern.nix { inherit pkgs; inherit (pkgs) lib; system = pkgs.stdenv.hostPlatform.system; }).tools.meeting-kit;
         default = meeting-kit;
       });
 

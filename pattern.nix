@@ -1,8 +1,8 @@
-# meeting-kit as a graft provider (graft v2.13.0 or later): graft's mkFlake calls this once per system
-# in a repository that grafts the kit as a git submodule, and adds `meeting-kit` to its tools
-# (packages.<system>.tools, on PATH in the dev shell). The repository's flake names nothing of the kit.
+# meeting-kit as a tuteur pattern (provider/3; tuteur v0.2.1 or later reads pattern.nix): tuteur's mkFlake
+# calls this once per system in a repository that pins the kit as a git submodule, and adds `meeting-kit` to its
+# tools (packages.<system>.tools, on PATH in the dev shell). The repository's flake names nothing of the kit.
 #
-# The command runs the kit from `scion`, graft's store copy of this submodule alone, so the
+# The command runs the kit from tuteur's store copy of this submodule alone, so the
 # repository's own content (meeting transcripts) never enters the Nix store. Its bun is pinned here,
 # not taken from the repository's nixpkgs, so the kit runs on the bun it is tested with.
 { pkgs, lib, system, ... }:

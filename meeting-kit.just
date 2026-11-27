@@ -14,7 +14,7 @@
 # Never list an imported recipe as a dependency (`check-local: meeting-check`): with the scion empty, `import?`
 # skips this file and `just` then refuses the whole justfile ("unknown dependency").
 
-# The meeting-kit command: a workspace points it at its graft tools package (graft.nix); MEETING_KIT per shell.
+# The meeting-kit command: a workspace points it at its graft tools package (pattern.nix); MEETING_KIT per shell.
 meeting_kit := env("MEETING_KIT", "meeting-kit")
 
 # Validate meeting-kit.yaml and check that windmill/ is rendered from it and from this kit version

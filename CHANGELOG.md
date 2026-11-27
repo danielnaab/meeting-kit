@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.6.0 - 2026-11-27
+
+A breaking version: the provider file is `pattern.nix`, tuteur's name for it from v0.2.1, in place of graft's
+`graft.nix`. What the kit gives a repository is unchanged.
+
+### Changed
+
+- **`graft.nix` is now `pattern.nix`** ([provider/3](https://github.com/danielnaab/tuteur/blob/v0.2.1/docs/reference/provider.md)):
+  the same `meeting-kit` tool, with the kit's pinned bun. The kit's own flake and the README name it.
+
+### Upgrading
+
+1. Take tuteur v0.2.1 or later first (a patch: `nix run .#tuteur upgrade`, or the weekly job): tuteur v0.2.0 and
+   graft read only `tuteur.nix` or `graft.nix`, so with this version their repository's tools lose `meeting-kit`.
+2. Take this version by name: `nix run .#tuteur upgrade meeting-kit@v0.6.0`.
+3. Done when `nix run .#tuteur check` passes and `meeting-kit --help` runs from the repository's tools.
+
 ## v0.5.0 - 2026-11-24
 
 People notes are named by the person's name, as notebook-kit v2.3.0 names wiki pages: `wiki/people/Ada Lovelace.md`,

@@ -22,14 +22,14 @@ rendered `windmill/README.md`.
 
 ## Use it
 
-The kit is a [graft](https://github.com/danielnaab/graft) provider. In the repository that uses it:
+The kit is a [tuteur](https://github.com/danielnaab/tuteur) pattern. In the repository that uses it:
 
-1. **Graft it** (graft v2.13.0 or later). The kit's `graft.nix` adds the `meeting-kit` command to the repository's
-   graft tools (`packages.<system>.tools`), with the bun it is tested with; the repository's flake names nothing
+1. **Pin it** (tuteur v0.2.1 or later). The kit's `pattern.nix` adds the `meeting-kit` command to the repository's
+   tools (`packages.<system>.tools`), with the bun it is tested with; the repository's flake names nothing
    of the kit:
 
    ```sh
-   nix run .#graft add https://github.com/danielnaab/meeting-kit@v0.5.0
+   nix run .#tuteur add https://github.com/danielnaab/meeting-kit@v0.6.0
    ```
 
    This adds the git submodule `scions/meeting-kit/` (in the repository's scions directory, if it has one: for a
@@ -74,7 +74,7 @@ To upgrade, run `just upgrade` (graft moves the submodule to the new tag), read 
 | `src/vault/`, `src/people/`, `src/capture/` | The vault's meeting layout, people notes, and capture |
 | `src/windmill/render.ts` | Renders `windmill/f/meeting_kit/` (templates) into a repository's `windmill/f/<folder>/` |
 | `windmill/f/meeting_kit/` | Windmill templates: the agent runner script, the synthesis tick, the push-triggered synthesis, and the workday briefings |
-| `graft.nix` | What a repository that grafts the kit gets: the `meeting-kit` tool, with the kit's pinned bun |
+| `pattern.nix` | What a repository that pins the kit gets: the `meeting-kit` tool, with the kit's pinned bun |
 | `nix/package.nix` | The command, built from the kit's own commit |
 | `meeting-kit.just` | Recipes a repository imports |
 | `docs/` | [the command](docs/cli.md), [config](docs/config.md), [executable kits](docs/executable-kits.md) (the pattern this kit follows) |
